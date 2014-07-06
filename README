@@ -1,0 +1,15 @@
+# -*- mode: org; coding: utf-8; -*-
+#+TITLE: Ballot
+#+STARTUP: indent
+
+* WT200 Election SQLite Loader
+** General
+   Use Windows console to run the programs.
+** wt200.db
+   Database including at least the following three tables: shares, quorum and votes.
+** quorum
+   Enter apt numbers.
+** vote [-i <seats>:<candidates>]
+   Enter share and votes. The number of available seats and candidates is tored into vote.ini.
+** sqlite3.exe wt200.db
+
