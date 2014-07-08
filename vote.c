@@ -1,19 +1,48 @@
 /* Voting SQLite loader, E. Wexler */
 
-#include <setjmp.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <readline/readline.h>
 #include <sqlite3.h>
 
-/* max 7 seats and candidates */
+#ifdef __MINGW32__
+/* 
+ * public domain strtok_r() by Charlie Gordon
+ *
+ *   from comp.lang.c  9/14/2007
+ *
+ *      http://groups.google.com/group/comp.lang.c/msg/2ab1ecbb86646684
+ *
+ *     (Declaration that it's public domain):
+ *      http://groups.google.com/group/comp.lang.c/msg/7c7b39328fefab9c
+ */
 
-const char *INITF = "vote.ini";
-const char *DBFILE = "wt200.db";
+char* strtok_r(char *str, const char *delim, char **nextp)
+{
+  char *ret;
 
-#define NCOLS 25		/* max number of db columns */
+  if (str == NULL) {
+    str = *nextp;
+  }
+  str += strspn(str, delim);
+  if (*str == '\0') {
+    return NULL;
+  }
+  ret = str;
+  str += strcspn(str, delim);
+  if (*str) {
+    *str++ = '\0';
+  }
+  *nextp = str;
+  return ret;
+}
+#endif
+
+#define SEAS 7			/* max no. of seats */
+#define CANS 21			/* max no. of candidates */
+#define NCOLS 23		/* max number of db columns */
+
 int Report[NCOLS];
 int DBReport(void* mess, int ncols, char** values, char** headers)
 {
@@ -22,139 +51,223 @@ int DBReport(void* mess, int ncols, char** values, char** headers)
 
   if (mess != NULL && ncols > 0)
     printf("%s: ", (const char*)mess);
-  for (i = 0; i < NCOLS; i++) {
+  for (i = 0; i < ncols; i++) {
     value = values[i];
-    if (value == NULL)
+    if (value == NULL) {
       value = "N/A";
-    if (mess != NULL && i < ncols)
+      Report[i] = 0;
+    }
+    else
+      sscanf(value, "%d", Report+i);
+    if (mess != NULL)
       printf("%s=%s ", headers[i], value);
-    if (i >= ncols || sscanf(value, "%d", Report+i) != 1)
-      Report[i] = -1;
   }
   if (mess != NULL && ncols > 0)
     printf("\n");
   return 0;
 }
 
-sqlite3 *DB;
-char *DBerr = "CANNOT OPEN DATABASE";
+sqlite3 *DB; char *DBerr = "";
 void Guard(int rc)
 {
   if(rc != SQLITE_OK) {
-    if (DBerr) {
-      fprintf(stderr, "SQL error: %s\n", DBerr);
-      sqlite3_close(DB);
-      exit(EXIT_FAILURE);
-    }
+      fprintf(stderr, "SQL error: %s\n", *DBerr ? DBerr : sqlite3_errmsg(DB));
+    sqlite3_close(DB);
+    exit(EXIT_FAILURE);
+  }
+}
+
+int change = 0, quit = 0;
+void bye()
+{
+  if (quit)
+    printf("EOF\n");
+  if (change) 
+    printf(DBNAME ".db changed. ");
+  if (change || !quit) {
+    printf("Press Enter to end...");
+    while (getchar() != '\n');
   }
 }
 
 int main(int argc, char *argv[])
 {
-  char *txt, text[240];
+  char *del="., \n", *p, line[1024], *q, text[1024];
   int init, opt, seas, cans; 
-  int i, j, cnt, num, jump;
-  int share, ix[7], vote[7];
-  jmp_buf jmp;
+  int i, j, cnt, num, ix[CANS];
+  int cycle;
   FILE *fp;
 
-  printf("WT200 Votes to SQLite loader. Exit by Ctrl-D. EW " __DATE__ ".\n");
+  printf(DBNAME ".db loader. Exit by Ctrl-Z (EOF). EW " __DATE__ ".\n");
+  
+  strcpy(line, argv[0]);
+  strcpy(text, argv[0]);
+#ifdef __MINGW32__
+  p = strrchr(line, '\\');
+  q = strrchr(text, '\\');
+#else
+  p = strrchr(line, '/');
+  q = strrchr(text, '/');
+#endif
+  if (p != NULL) p++; else p = line;
+  strcpy(p, "vote.ini");
+  if (q != NULL) q++; else q = text;
+  strcpy(q, DBNAME ".db");
+
+  atexit(bye);
 
   init = 0;
-  seas = 0;
-  cans = 0;
   while ((opt = getopt(argc, argv, "i:")) != -1) {
     switch (opt) {
     case 'i':
-      init = 1;
-      sscanf(optarg, "%d:%d", &seas, &cans);
-      seas = atoi(optarg);
-
-      break;
+      num = sscanf(optarg, "%d:%d", &seas, &cans);
+      if (num != 2 || seas < 1 || seas > SEAS || cans < 1 || cans > CANS)
+	fprintf(stderr, "Check arguments\n");
+      else {
+	init = 1;
+	break;
+      }
     default: /* '?' */
-      fprintf(stderr, "Usage: %s [-i #seats:#candidates]\n", argv[0]);
+      fprintf(stderr, "Usage: vote [-i #Seats:#Candidates]\n");
       exit(EXIT_FAILURE);
     }
   }
 
   if (init) {
-    if ((fp = fopen(INITF, "wt")) == NULL || fprintf(fp, "%d:%d\n", seas, cans) < 0 || fclose(fp) == EOF) {
-      perror(INITF);
+    if ((fp = fopen(line, "wt")) == NULL || fprintf(fp, "%d:%d\n", seas, cans) < 0 || fclose(fp) == EOF) {
+      perror(line);
       exit(EXIT_FAILURE);
     }
-  }
-  else {
-    if ((fp = fopen(INITF, "rt")) == NULL || fscanf(fp, "%d:%d\n", &seas, &cans) < 0 || fclose(fp) == EOF) {
-      perror(INITF);
-      exit(EXIT_FAILURE);
+    Guard(sqlite3_open_v2(text, &DB, SQLITE_OPEN_READWRITE, NULL));
+    Guard(sqlite3_exec(DB, "select count(*) as apts, sum(share) as shares from shares", DBReport, DBNAME, &DBerr));
+    sqlite3_exec(DB, "drop table votes", NULL, NULL, NULL);
+    change = 1;
+    strcpy(text, "create table votes (apt integer primary key, ");
+    for (i = 0; i < cans; i++) {
+      p = text + strlen(text);
+      sprintf(p, "can%d integer default 0, ", i+1);
     }
-  }  
-
-  printf("Seats = %d, Candidates = %d\n", seas, cans);
-  if (seas < 1 || seas > 7 || cans < 1 || cans > 7) {
-    fprintf(stderr, "Check arguments\n");
-    exit(EXIT_FAILURE);
-  }
-
-  Guard(sqlite3_open_v2(DBFILE, &DB, SQLITE_OPEN_READWRITE, NULL));
-
-  jump = setjmp(jmp);
-  while (jump >= 0) {
-    txt = "select count(*) as apts, sum(vote1) as v1, sum(vote2) as v2, sum(vote3) as v3, sum(vote4) as v4, sum(vote5) as v5, sum(vote6) as v6, sum(vote7) as v7 from votes";
-    Guard(sqlite3_exec(DB, txt, DBReport, "Voting", &DBerr));
-
-    txt = readline("Share.Vote.Vote... ");
-    if (txt == NULL) {
-      printf("EOF\n");
-      longjmp(jmp, -1);
-    }
-
-    num = sscanf(txt, "%d.%d.%d.%d.%d.%d.%d.%d", &share, ix+0, ix+1, ix+2, ix+3, ix+4, ix+5, ix+6);
-    if (num <= 0)
-      longjmp(jmp, 1);
-
-    num--;
-    if (seas < num) {
-      printf("TOO MANY VOTES\n");
-      longjmp(jmp, 1);
-    }
-
-    for (i = 0; i < num; i++)
-      if (ix[i] < 1 || cans < ix[i]) {
-	printf("UNKNOWN CANDIDATE\n");
-	longjmp(jmp, 1);
-      }
-
-    for (i = 0; i < num-1; i++)
-      for (j = i + 1; j < num; j++)
-	if (ix[i] == ix[j]) {
-	  printf("DUPLICATE CANDIDATE\n");
-	  longjmp(jmp, 1);
-	}
-
-    sprintf(text, "select count(*) from shares where share = %d", share);
-    Guard(sqlite3_exec(DB, text, DBReport, NULL, &DBerr));
-    if (Report[0] <= 0) {
-      printf("ILLEGAL SHARE\n");
-      longjmp(jmp, 1);
-    }
-    cnt = Report[0];
-
-    sprintf(text, "select count(*) from votes where share = %d", share);
-    Guard(sqlite3_exec(DB, text, DBReport, NULL, &DBerr));
-    if (Report[0] >= cnt) {
-      printf("EXHAUSTED SHARE\n");
-      longjmp(jmp, 1);
-    }
-
-    memset(vote, 0, sizeof(vote));
-    for (i = 0; i < num; i++)
-      vote[ix[i] - 1] = share;
-    sprintf(text, "insert into votes (share, vote1, vote2, vote3, vote4, vote5, vote6, vote7) values (%d, %d, %d, %d, %d, %d, %d, %d)",
-	    share, vote[0], vote[1], vote[2], vote[3], vote[4], vote[5], vote[6]);
+    p = text + strlen(text) - 2;
+    strcpy(p, ")");
     Guard(sqlite3_exec(DB, text, NULL, NULL, &DBerr));
   }
+  else {
+    if ((fp = fopen(line, "rt")) == NULL || fscanf(fp, "%d:%d\n", &seas, &cans) != 2 || fclose(fp) == EOF) {
+      perror(line);
+      exit(EXIT_FAILURE);
+    }
+    Guard(sqlite3_open_v2(text, &DB, SQLITE_OPEN_READWRITE, NULL));
+  }
 
+  printf("Enter negative apt to delete the apt vote.\n"
+	 "Seats = %d, Candidates = %d\n\n", seas, cans);
+
+  while (1) {
+    cycle = 0;
+
+    /* report current vote */
+    
+    strcpy(text, "select ");
+    for (i = 0; i < cans; i++) {
+      p = text + strlen(text);
+      sprintf(p, "sum(can%d), ", i+1);
+    }
+    p = text + strlen(text) - 2;
+    strcpy(p, " from votes");
+    Guard(sqlite3_exec(DB, text, DBReport, NULL, &DBerr));
+
+    strcpy(text, "select count(*) as apts, sum(shares.share) as shares, ");
+    for (i = 0; i <= seas; i++) {
+      num = -1;
+      for (j = 0; j < cans; j++) {
+	if (Report[j] > num) {
+	  cnt = j;
+	  num = Report[j];
+	}
+      }
+      Report[cnt] = -1;
+      p = text + strlen(text);
+      sprintf(p, "sum(votes.can%d) as c%d, ", cnt+1, cnt+1);
+    }
+    p = text + strlen(text) - 2;
+    strcpy(p, " from votes inner join shares on votes.apt = shares.apt");
+    Guard(sqlite3_exec(DB, text, DBReport, "Voted", &DBerr));
+
+    /* enter new vote */
+
+    printf("Apt.Can1.Can2... "); fflush(stdout);
+    p = fgets(line, sizeof(line), stdin);
+    if (p == NULL) {
+      quit = 1; 
+      break;
+    }
+
+    p = strtok_r(p, del, &q);
+    if (p == NULL || sscanf(p, "%d", &cnt) != 1) {
+      printf("NO INPUT\n"); 
+      continue;
+    }
+
+    sprintf(text, "select count(*) from shares where apt = %d", abs(cnt));
+    sqlite3_exec(DB, text, DBReport, NULL, &DBerr);
+    if (Report[0] != 1) {
+      printf("APT UNKNOWN\n"); 
+      continue;
+    }
+
+    if (cnt < 0) {
+      sprintf(text, "delete from votes where apt = %d", abs(cnt));
+      sqlite3_exec(DB, text, NULL, NULL, &DBerr);
+      change = 1;
+      printf("DELETED APT NO %d\n", abs(cnt)); 
+      continue;
+    }
+
+    sprintf(text, "select count(*) from votes where apt = %d", cnt);
+    sqlite3_exec(DB, text, DBReport, NULL, &DBerr);
+    if (Report[0] != 0) {
+      printf("APT ALREADY VOTED\n");
+      continue;
+    }
+
+    sprintf(text, "select share from shares where apt = %d", cnt);
+    sqlite3_exec(DB, text, DBReport, NULL, &DBerr);
+    num = Report[0];
+
+    memset(ix, 0, sizeof(int)*cans);
+    p = strtok_r(NULL, del, &q);
+    for (i = 0; i < seas; i++) {
+      if (p == NULL)
+	break;
+      if (sscanf(p, "%d", &j) != 1 || j < 1 || j > cans || ix[j-1] > 0) {
+	printf("ILL CAN\n");
+	cycle = 1; break;
+      }
+      ix[j-1] = num;
+      p = strtok_r(NULL, del, &q);
+    }
+    if (cycle) continue;
+
+    strcpy(text, "insert into votes (apt, ");
+    for (i = 0; i < cans; i++) {
+      if (ix[i] > 0) {
+	p = text + strlen(text);
+	sprintf(p, "can%d, ", i+1);
+      }
+    }
+    p = text + strlen(text) - 2;
+    sprintf(p, ") values (%d, ", cnt);
+    for (i = 0; i < cans; i++)
+      if (ix[i] > 0) {
+	p = text + strlen(text);
+	sprintf(p, "%d, ", ix[i]);
+      }
+    p = text + strlen(text) - 2;
+    strcpy(p, ")");
+    sqlite3_exec(DB, text, NULL, NULL, &DBerr);
+    change = 1;
+  }
   sqlite3_close(DB);
+
   exit(EXIT_SUCCESS);
 }

@@ -6,10 +6,8 @@
 ** General
    Use Windows console to run the programs.
 ** wt200.db
-   Database including at least the following three tables: shares, quorum and votes.
-** quorum
-   Enter apt numbers.
+   Database including "shares" & "votes" tables.
 ** vote [-i <seats>:<candidates>]
-   Enter share and votes. The number of available seats and candidates is tored into vote.ini.
+   Initialize.
 ** sqlite3.exe wt200.db
 
