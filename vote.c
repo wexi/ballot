@@ -248,6 +248,11 @@ int main(int argc, char *argv[])
     }
     if (cycle) continue;
 
+    if (p != NULL) {
+      printf("TOO MANY VOTES\n");
+      continue;
+    }
+    
     strcpy(text, "insert into votes (apt, ");
     for (i = 0; i < cans; i++) {
       if (ix[i] > 0) {
