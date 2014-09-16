@@ -1,4 +1,4 @@
-/* Voting SQLite loader, E. Wexler */
+/* Voting SQLite loader, Enoch */
 
 #include <unistd.h>
 #include <stdlib.h>
