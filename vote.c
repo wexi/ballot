@@ -139,6 +139,7 @@ int main(int argc, char *argv[])
       exit(EXIT_FAILURE);
     }
     Guard(sqlite3_open_v2(text, &DB, SQLITE_OPEN_READWRITE, NULL));
+    Guard(sqlite3_exec(DB, "update shares set code = randomblob(2)", NULL, NULL, NULL));
     Guard(sqlite3_exec(DB, "select count(*) as apts, sum(share) as shares from shares", DBReport, DBNAME, &DBerr));
     sqlite3_exec(DB, "drop table votes", NULL, NULL, NULL);
     change = 1;
