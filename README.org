@@ -23,9 +23,17 @@ example set by the [[http://www.sqlite.org/copyright.html][SQLite Project]].
 
 ** sqlite3.exe mycondo.db
 
-Create your own database including "shares" & "votes" tables. To be
-continued.
+Create a database with a table of shares:
+#+begin_example
+CREATE TABLE "shares" (
+	`apt`	INTEGER,
+	`share`	INTEGER,
+	`code`	BLOB,
+	PRIMARY KEY(apt)
+)
+#+end_example
 
 ** vote [-i <seats>:<candidates>]
 
-Initialize program.
+Initialize the "mycondo.db" database file; This includes changing the
+security code (two byte BLOB field) in the table of shares.
