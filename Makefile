@@ -1,7 +1,7 @@
 PROGS := vote
 DBNAME := wt200
 
-MMM=i686-pc-mingw32.static
+MMM=i686-w64-mingw32.static
 MXE=${HOME}/mxe/usr
 MGW=${MXE}/${MMM}
 
