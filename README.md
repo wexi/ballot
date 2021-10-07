@@ -1,17 +1,16 @@
 
 # Table of Contents
 
-<<<<<<< HEAD
-1.  [General](#orgf619053)
-2.  [Software License](#org6336cda)
-3.  [TODO](#orgf1b9359)
-4.  [sqlite3.exe mycondo.db](#orgec1e111)
-5.  [vote [-i <seats>:<candidates>]](#org0f97000)
-6.  [Examples](#orgc50460f)
+1.  [General](#orga9e2cf5)
+2.  [Software License](#org52c9761)
+3.  [TODO](#org5daf69d)
+4.  [sqlite3.exe mycondo.db](#orgc4f7100)
+5.  [vote [-i <seats>:<candidates>]](#orgbcb0c5f)
+6.  [Examples](#org841f668)
 
 
 
-<a id="orgf619053"></a>
+<a id="orga9e2cf5"></a>
 
 # General
 
@@ -26,7 +25,7 @@ The program (vote) can be built on Linux also for Windows using [MXE (M
 cross environment](https://mxe.cc/) (vote.exe). See the Makefile.
 
 
-<a id="org6336cda"></a>
+<a id="org52c9761"></a>
 
 # Software License
 
@@ -34,7 +33,7 @@ The software in this repository is in the public domain, following the
 example set by the [SQLite Project](http://www.sqlite.org/copyright.html).
 
 
-<a id="orgf1b9359"></a>
+<a id="org5daf69d"></a>
 
 # TODO
 
@@ -43,7 +42,7 @@ logging that works the same in Linux and in Windows. [log4c](http://log4c.source
 candidate but it currently has a build issue on MXE.
 
 
-<a id="orgec1e111"></a>
+<a id="orgc4f7100"></a>
 
 # sqlite3.exe mycondo.db
 
@@ -57,7 +56,7 @@ Create a database with a table of shares:
     )
 
 
-<a id="org0f97000"></a>
+<a id="orgbcb0c5f"></a>
 
 # vote [-i <seats>:<candidates>]
 
@@ -66,7 +65,7 @@ security code (two byte BLOB field) in the table of shares. The security
 code is just being displayed.
 
 
-<a id="orgc50460f"></a>
+<a id="org841f668"></a>
 
 # Examples
 
@@ -104,53 +103,4 @@ Just Use:
     Voted: apts=0 shares=N/A c1=N/A c2=N/A c3=N/A 
     Apt.Can1.Can2... EOF
     mycondo.db changed.
-=======
-1.  [Election SQLite Loader](#org615900e)
-    1.  [General](#org4dcbcaa)
-    2.  [Software License](#orgf6862c2)
-    3.  [sqlite3.exe mycondo.db](#org88d7d3f)
-    4.  [vote [-i <seats>:<candidates>]](#org54a64fb)
-
-
-
-<a id="org615900e"></a>
-
-# Election SQLite Loader
-
-
-<a id="org4dcbcaa"></a>
-
-## General
-
-The following is a "quick & dirty" ballot tallying program for the benefit
-of some troubled high rise community in the North East of the USA. Data
-entry is optimized for the use of "blind" right-hand PC numeric-pad typing.
-This program uses the SQLite data base and is written in C. To examine
-collected votes use a program like [SQLITEbrowser](http://sqlitebrowser.org/) on the database file.
-
-This community votes through weighted shares.
-
-
-<a id="orgf6862c2"></a>
-
-## Software License
-
-The software in this repository is in the public domain, following the
-example set by the [SQLite Project](http://www.sqlite.org/copyright.html).
-
-
-<a id="org88d7d3f"></a>
-
-## sqlite3.exe mycondo.db
-
-Create your own database including "shares" & "votes" tables. To be
-continued.
-
-
-<a id="org54a64fb"></a>
-
-## vote [-i <seats>:<candidates>]
-
-Initialize program.
->>>>>>> 4aacb878e94fa392e870d3c64effacc70eae68d4
 
