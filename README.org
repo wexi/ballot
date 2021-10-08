@@ -59,7 +59,7 @@ Seats = 2, Candidates = 4
 
 Voted: apts=0 shares=N/A c1=N/A c2=N/A c3=N/A 
 Apt.Can1.Can2... 1901.1.2
-Ballot: share=1469 code=0xBEC5 
+Ballot: share=1469 code=0x09AF 
 
 Apt.Can1.Can2... EOF
 mycondo.db changed.

@@ -1,16 +1,16 @@
 
 # Table of Contents
 
-1.  [General](#orga9e2cf5)
-2.  [Software License](#org52c9761)
-3.  [TODO](#org5daf69d)
-4.  [sqlite3.exe mycondo.db](#orgc4f7100)
-5.  [vote [-i <seats>:<candidates>]](#orgbcb0c5f)
-6.  [Examples](#org841f668)
+1.  [General](#org3ac3648)
+2.  [Software License](#orgcbdeb3a)
+3.  [TODO](#org94cbd0e)
+4.  [sqlite3.exe mycondo.db](#org63d0dfd)
+5.  [vote [-i <seats>:<candidates>]](#orga42992c)
+6.  [Examples](#orgec063ab)
 
 
 
-<a id="orga9e2cf5"></a>
+<a id="org3ac3648"></a>
 
 # General
 
@@ -25,7 +25,7 @@ The program (vote) can be built on Linux also for Windows using [MXE (M
 cross environment](https://mxe.cc/) (vote.exe). See the Makefile.
 
 
-<a id="org52c9761"></a>
+<a id="orgcbdeb3a"></a>
 
 # Software License
 
@@ -33,7 +33,7 @@ The software in this repository is in the public domain, following the
 example set by the [SQLite Project](http://www.sqlite.org/copyright.html).
 
 
-<a id="org5daf69d"></a>
+<a id="org94cbd0e"></a>
 
 # TODO
 
@@ -42,7 +42,7 @@ logging that works the same in Linux and in Windows. [log4c](http://log4c.source
 candidate but it currently has a build issue on MXE.
 
 
-<a id="orgc4f7100"></a>
+<a id="org63d0dfd"></a>
 
 # sqlite3.exe mycondo.db
 
@@ -56,7 +56,7 @@ Create a database with a table of shares:
     )
 
 
-<a id="orgbcb0c5f"></a>
+<a id="orga42992c"></a>
 
 # vote [-i <seats>:<candidates>]
 
@@ -65,7 +65,7 @@ security code (two byte BLOB field) in the table of shares. The security
 code is just being displayed.
 
 
-<a id="org841f668"></a>
+<a id="orgec063ab"></a>
 
 # Examples
 
@@ -79,7 +79,7 @@ Initialize and vote:
     
     Voted: apts=0 shares=N/A c1=N/A c2=N/A c3=N/A 
     Apt.Can1.Can2... 1901.1.2
-    Ballot: share=1469 code=0xBEC5 
+    Ballot: share=1469 code=0x09AF 
     
     Apt.Can1.Can2... EOF
     mycondo.db changed.
