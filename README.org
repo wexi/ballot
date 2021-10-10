@@ -22,29 +22,37 @@ cross environment]] (vote.exe). See the Makefile.
 The software in this repository is in the public domain, following the
 example set by the [[http://www.sqlite.org/copyright.html][SQLite Project]].
 
-* TODO
+* sqlite3 mycondo.db
 
-Add vote logging. Not done since there is no ready made C library for
-logging that works the same in Linux and in Windows. [[http://log4c.sourceforge.net/][log4c]] is a good
-candidate but it currently has a build issue on MXE.
+Create a table of shares in the database and fill it with the apt number
+and the share value pairs of your community; Ignore the code blob.
 
-* sqlite3.exe mycondo.db
-
-Create a database with a table of shares:
 #+begin_example
-CREATE TABLE "shares" (
-	`apt`	INTEGER,
-	`share`	INTEGER,
-	`code`	BLOB,
-	PRIMARY KEY(apt)
+CREATE TABLE shares (
+	apt	INTEGER PRIMAY KEY,
+	share	INTEGER,
+	code	BLOB
 )
 #+end_example
 
 * vote [-i <seats>:<candidates>]
 
-Initialize the "mycondo.db" database file; This includes changing the
-security code (two byte BLOB field) in the table of shares. The security
-code is just being displayed.
+Initialize the database file; This includes changing the security code in
+the table of shares with a two byte random blob. A new votes table is then
+created with the following fields:
+
+#+begin_example
+CREATE TABLE votes (
+      apt INTEGER PRIMAY KEY,
+      vtime INTEGER,
+      can1 INTEGER DEFAULT 0,
+      ...
+)
+#+end_example
+
+vtime is the "unix time" when accepting the apt no vote and it is captured
+for forensic purposes only. can1, etc. are the total number of shares cast
+for the first candidate, etc.
 
 * Examples
 

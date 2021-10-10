@@ -1,5 +1,6 @@
 /* Voting SQLite loader, Enoch */
 
+#include <time.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -153,14 +154,14 @@ int main(int argc, char *argv[])
     Guard(sqlite3_exec
 	  (DB, "update shares set code = randomblob(2)", NULL, NULL, NULL));
     Guard(sqlite3_exec
-	  (DB, "select count(*) as apts, sum(share) as shares from shares",
+	  (DB, "SELECT count(*) AS apts, sum(share) AS shares FROM shares",
 	   DBReport, DBNAME, &DBerr));
     sqlite3_exec(DB, "drop table votes", NULL, NULL, NULL);
     change = 1;
-    strcpy(text, "create table votes (apt integer primary key, ");
+    strcpy(text, "CREATE TABLE votes (apt INTEGER PRIMAY KEY, vtime INTEGER, ");
     for (i = 0; i < cans; i++) {
       p = text + strlen(text);
-      sprintf(p, "can%d integer default 0, ", i + 1);
+      sprintf(p, "can%d INTEGER DEFAULT 0, ", i + 1);
     }
     p = text + strlen(text) - 2;
     strcpy(p, ")");
@@ -183,16 +184,16 @@ int main(int argc, char *argv[])
 
     /* report current vote */
 
-    strcpy(text, "select ");
+    strcpy(text, "SELECT ");
     for (i = 0; i < cans; i++) {
       p = text + strlen(text);
       sprintf(p, "sum(can%d), ", i + 1);
     }
     p = text + strlen(text) - 2;
-    strcpy(p, " from votes");
+    strcpy(p, " FROM votes");
     Guard(sqlite3_exec(DB, text, DBReport, NULL, &DBerr));
 
-    strcpy(text, "select count(*) as apts, sum(shares.share) as shares, ");
+    strcpy(text, "SELECT count(*) AS apts, sum(shares.share) AS shares, ");
     for (i = 0; i <= seas; i++) {
       num = -1;
       for (j = 0; j < cans; j++) {
@@ -203,10 +204,10 @@ int main(int argc, char *argv[])
       }
       Report[cnt] = -1;
       p = text + strlen(text);
-      sprintf(p, "sum(votes.can%d) as c%d, ", cnt + 1, cnt + 1);
+      sprintf(p, "sum(votes.can%d) AS c%d, ", cnt + 1, cnt + 1);
     }
     p = text + strlen(text) - 2;
-    strcpy(p, " from votes inner join shares on votes.apt = shares.apt");
+    strcpy(p, " FROM votes inner join shares on votes.apt = shares.apt");
     Guard(sqlite3_exec(DB, text, DBReport, "\nVoted", &DBerr));
 
     /* enter new vote */
@@ -225,7 +226,7 @@ int main(int argc, char *argv[])
       continue;
     }
 
-    sprintf(text, "select count(*) from shares where apt = %d", abs(cnt));
+    sprintf(text, "SELECT count(*) FROM shares WHERE apt = %d", abs(cnt));
     sqlite3_exec(DB, text, DBReport, NULL, &DBerr);
     if (Report[0] != 1) {
       printf("APT UNKNOWN\n");
@@ -233,14 +234,14 @@ int main(int argc, char *argv[])
     }
 
     if (cnt < 0) {
-      sprintf(text, "delete from votes where apt = %d", abs(cnt));
+      sprintf(text, "DELETE FROM votes WHERE apt = %d", abs(cnt));
       sqlite3_exec(DB, text, NULL, NULL, &DBerr);
       change = 1;
       printf("DELETED APT NO %d\n", abs(cnt));
       continue;
     }
 
-    sprintf(text, "select count(*) from votes where apt = %d", cnt);
+    sprintf(text, "SELECT count(*) FROM votes WHERE apt = %d", cnt);
     sqlite3_exec(DB, text, DBReport, NULL, &DBerr);
     if (Report[0] != 0) {
       printf("APT ALREADY VOTED\n");
@@ -248,7 +249,7 @@ int main(int argc, char *argv[])
     }
 
     sprintf(text,
-	    "select share, '0x' || hex(code) as code from shares where apt = %d",
+	    "SELECT share, '0x' || hex(code) AS code FROM shares WHERE apt = %d",
 	    cnt);
     sqlite3_exec(DB, text, DBReport, "Ballot", &DBerr);
     num = Report[0];
@@ -274,7 +275,7 @@ int main(int argc, char *argv[])
       continue;
     }
 
-    strcpy(text, "insert into votes (apt, ");
+    strcpy(text, "INSERT INTO votes (vtime, apt, ");
     for (i = 0; i < cans; i++) {
       if (ix[i] > 0) {
 	p = text + strlen(text);
@@ -282,7 +283,7 @@ int main(int argc, char *argv[])
       }
     }
     p = text + strlen(text) - 2;
-    sprintf(p, ") values (%d, ", cnt);
+    sprintf(p, ") VALUES (%d, %ld,", cnt, time(NULL));
     for (i = 0; i < cans; i++)
       if (ix[i] > 0) {
 	p = text + strlen(text);

@@ -1,16 +1,15 @@
 
 # Table of Contents
 
-1.  [General](#org3ac3648)
-2.  [Software License](#orgcbdeb3a)
-3.  [TODO](#org94cbd0e)
-4.  [sqlite3.exe mycondo.db](#org63d0dfd)
-5.  [vote [-i <seats>:<candidates>]](#orga42992c)
-6.  [Examples](#orgec063ab)
+1.  [General](#orgd61aa36)
+2.  [Software License](#org407f80f)
+3.  [sqlite3 mycondo.db](#org7d427cd)
+4.  [vote [-i <seats>:<candidates>]](#orge519ec8)
+5.  [Examples](#orga08e9bf)
 
 
 
-<a id="org3ac3648"></a>
+<a id="orgd61aa36"></a>
 
 # General
 
@@ -25,7 +24,7 @@ The program (vote) can be built on Linux also for Windows using [MXE (M
 cross environment](https://mxe.cc/) (vote.exe). See the Makefile.
 
 
-<a id="orgcbdeb3a"></a>
+<a id="org407f80f"></a>
 
 # Software License
 
@@ -33,39 +32,41 @@ The software in this repository is in the public domain, following the
 example set by the [SQLite Project](http://www.sqlite.org/copyright.html).
 
 
-<a id="org94cbd0e"></a>
+<a id="org7d427cd"></a>
 
-# TODO
+# sqlite3 mycondo.db
 
-Add vote logging. Not done since there is no ready made C library for
-logging that works the same in Linux and in Windows. [log4c](http://log4c.sourceforge.net/) is a good
-candidate but it currently has a build issue on MXE.
+Create a table of shares in the database and fill it with the apt number
+and the share value pairs of your community; Ignore the code blob.
 
-
-<a id="org63d0dfd"></a>
-
-# sqlite3.exe mycondo.db
-
-Create a database with a table of shares:
-
-    CREATE TABLE "shares" (
-    	`apt`	INTEGER,
-    	`share`	INTEGER,
-    	`code`	BLOB,
-    	PRIMARY KEY(apt)
+    CREATE TABLE shares (
+    	apt	INTEGER PRIMAY KEY,
+    	share	INTEGER,
+    	code	BLOB
     )
 
 
-<a id="orga42992c"></a>
+<a id="orge519ec8"></a>
 
 # vote [-i <seats>:<candidates>]
 
-Initialize the "mycondo.db" database file; This includes changing the
-security code (two byte BLOB field) in the table of shares. The security
-code is just being displayed.
+Initialize the database file; This includes changing the security code in
+the table of shares with a two byte random blob. A new votes table is then
+created with the following fields:
+
+    CREATE TABLE votes (
+          apt INTEGER PRIMAY KEY,
+          vtime INTEGER,
+          can1 INTEGER DEFAULT 0,
+          ...
+    )
+
+vtime is the "unix time" when accepting the apt no vote and it is captured
+for forensic purposes only. can1, etc. are the total number of shares cast
+for the first candidate, etc.
 
 
-<a id="orgec063ab"></a>
+<a id="orga08e9bf"></a>
 
 # Examples
 
