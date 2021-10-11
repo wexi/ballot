@@ -1,15 +1,15 @@
 
 # Table of Contents
 
-1.  [General](#orgeb28208)
-2.  [Software License](#orgaee87f8)
-3.  [Prerequisite](#org59f3670)
-4.  [Program initialization](#org7db48d0)
-5.  [Examples](#org1a1f5a6)
+1.  [General](#org981424e)
+2.  [Software License](#org6da99c1)
+3.  [Prerequisite](#org509c0b7)
+4.  [Program initialization](#org1500ec8)
+5.  [Examples](#orge738013)
 
 
 
-<a id="orgeb28208"></a>
+<a id="org981424e"></a>
 
 # General
 
@@ -24,7 +24,7 @@ collected ballots use [SQLITEbrowser](http://sqlitebrowser.org/) or a similar to
 using [MXE (M cross environment)](https://mxe.cc/). Here is the latest [Windows binary release](./Windows-binary-release.zip).
 
 
-<a id="orgaee87f8"></a>
+<a id="org6da99c1"></a>
 
 # Software License
 
@@ -32,7 +32,7 @@ The software in this repository is in the public domain following the
 example set by the [SQLite Project](http://www.sqlite.org/copyright.html).
 
 
-<a id="org59f3670"></a>
+<a id="org509c0b7"></a>
 
 # Prerequisite
 
@@ -49,7 +49,7 @@ Fill the `shares` table with the your community `apt` (apartment number)
 and `share` value pairs (ignore the `code` column).
 
 
-<a id="org7db48d0"></a>
+<a id="org1500ec8"></a>
 
 # Program initialization
 
@@ -84,7 +84,7 @@ vtime is the "unix time" of enering the apt vote; It is captured for
 forensic purposes only.
 
 
-<a id="org1a1f5a6"></a>
+<a id="orge738013"></a>
 
 # Examples
 
