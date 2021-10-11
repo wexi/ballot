@@ -1,15 +1,15 @@
 
 # Table of Contents
 
-1.  [General](#orgce19c2e)
-2.  [Software License](#org0203e1a)
-3.  [Prerequisite](#org261b666)
-4.  [Program initialization](#org5f33031)
-5.  [Examples](#org4090ab7)
+1.  [General](#org65fa538)
+2.  [Software License and Legal Disclaimer](#org6cf8bc1)
+3.  [Prerequisite](#org35a3e3a)
+4.  [Program initialization](#org91332c3)
+5.  [Examples](#org279f63b)
 
 
 
-<a id="orgce19c2e"></a>
+<a id="org65fa538"></a>
 
 # General
 
@@ -24,15 +24,16 @@ collected ballots use [SQLITEbrowser](http://sqlitebrowser.org/) or a similar to
 using [MXE (M cross environment)](https://mxe.cc/). Here is the latest [Windows binary release](./Windows-binary-release.zip).
 
 
-<a id="org0203e1a"></a>
+<a id="org6cf8bc1"></a>
 
-# Software License
+# Software License and Legal Disclaimer
 
-The software in this repository is in the public domain following the
-example set by the [SQLite Project](http://www.sqlite.org/copyright.html).
+The software in this repository is in the public domain following the model
+set by the [SQLite Project](http://www.sqlite.org/copyright.html). The software is offered “as-is”, without
+warranty, and disclaiming liability for damages resulting from its use.
 
 
-<a id="org261b666"></a>
+<a id="org35a3e3a"></a>
 
 # Prerequisite
 
@@ -49,7 +50,7 @@ Fill the `shares` table with your community `apt` (apartment number) and
 `share` value pairs (ignore the `code` column).
 
 
-<a id="org5f33031"></a>
+<a id="org91332c3"></a>
 
 # Program initialization
 
@@ -84,7 +85,7 @@ vtime is the "unix time" of enering the apt vote; It is captured for
 forensic purposes only.
 
 
-<a id="org4090ab7"></a>
+<a id="org279f63b"></a>
 
 # Examples
 

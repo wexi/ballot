@@ -17,10 +17,11 @@ collected ballots use [[http://sqlitebrowser.org/][SQLITEbrowser]] or a similar 
 ~vote.exe~, the equivalent Microsoft Windows version, is built on Linux
 using [[https://mxe.cc/][MXE (M cross environment)]]. Here is the latest [[./Windows-binary-release.zip][Windows binary release]].
 
-* Software License
+* Software License and Legal Disclaimer
 
-The software in this repository is in the public domain following the
-example set by the [[http://www.sqlite.org/copyright.html][SQLite Project]].
+The software in this repository is in the public domain following the model
+set by the [[http://www.sqlite.org/copyright.html][SQLite Project]]. The software is offered “as-is”, without
+warranty, and disclaiming liability for damages resulting from its use.
 
 * Prerequisite
 
