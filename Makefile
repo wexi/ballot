@@ -4,7 +4,7 @@ PROG := vote
 DBNAME := condo
 
 WPROG := $(addsuffix .exe,$(PROG))
-ZIP := releases/Windows-binary-release.zip
+ZIP := Windows-binary-release.zip
 
 all: $(PROG)
 zip: $(ZIP)
