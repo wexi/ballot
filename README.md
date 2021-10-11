@@ -1,15 +1,15 @@
 
 # Table of Contents
 
-1.  [General](#org981424e)
-2.  [Software License](#org6da99c1)
-3.  [Prerequisite](#org509c0b7)
-4.  [Program initialization](#org1500ec8)
-5.  [Examples](#orge738013)
+1.  [General](#orgce19c2e)
+2.  [Software License](#org0203e1a)
+3.  [Prerequisite](#org261b666)
+4.  [Program initialization](#org5f33031)
+5.  [Examples](#org4090ab7)
 
 
 
-<a id="org981424e"></a>
+<a id="orgce19c2e"></a>
 
 # General
 
@@ -24,7 +24,7 @@ collected ballots use [SQLITEbrowser](http://sqlitebrowser.org/) or a similar to
 using [MXE (M cross environment)](https://mxe.cc/). Here is the latest [Windows binary release](./Windows-binary-release.zip).
 
 
-<a id="org6da99c1"></a>
+<a id="org0203e1a"></a>
 
 # Software License
 
@@ -32,7 +32,7 @@ The software in this repository is in the public domain following the
 example set by the [SQLite Project](http://www.sqlite.org/copyright.html).
 
 
-<a id="org509c0b7"></a>
+<a id="org261b666"></a>
 
 # Prerequisite
 
@@ -45,11 +45,11 @@ is set in the Makefile) with the following table of shares:
     	code	BLOB
     );
 
-Fill the `shares` table with the your community `apt` (apartment number)
-and `share` value pairs (ignore the `code` column).
+Fill the `shares` table with your community `apt` (apartment number) and
+`share` value pairs (ignore the `code` column).
 
 
-<a id="org1500ec8"></a>
+<a id="org5f33031"></a>
 
 # Program initialization
 
@@ -58,8 +58,8 @@ database file. If the optional `:+` argument is added, the security `code~s
 in ~shares` would be initialized with random two-byte BLOBs. These BLOBs
 can be useful with the printed material mailed to the voters to enhance the
 election security. It can substitute the need for using an expensive
-special paper to prevent [Ballot Stuffing](https://ballotpedia.org/Ballot_stuffing). You can then import the (apt,
-code) pairs to a `secure.csv` spreadsheet as follows:
+special paper to prevent [Ballot Stuffing](https://ballotpedia.org/Ballot_stuffing). You can export the (apt, code)
+pairs to a `secure.csv` spreadsheet as follows:
 
     $ sqlite3 condo.db
     SQLite version 3.34.1 2021-01-20 14:10:07
@@ -70,8 +70,8 @@ code) pairs to a `secure.csv` spreadsheet as follows:
     sqlite> select apt, hex(code) as code from shares order by apt;
     sqlite> .quit
 
-An empty table of `votes` would then be created or recreated if it already
-exists! The `votes` table has the following columns:
+An empty table of `votes` would be created or **recreated if it already
+exists**. The `votes` table has the following structure:
 
     CREATE TABLE votes (
           apt INTEGER PRIMAY KEY,
@@ -84,11 +84,11 @@ vtime is the "unix time" of enering the apt vote; It is captured for
 forensic purposes only.
 
 
-<a id="orge738013"></a>
+<a id="org4090ab7"></a>
 
 # Examples
 
-Initialize (+ security codes):
+Initialize with new security codes:
 
     Microsoft Windows [Version 10.0.19043.1237]
     (c) Microsoft Corporation. All rights reserved.

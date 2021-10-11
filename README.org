@@ -35,8 +35,8 @@ CREATE TABLE shares (
 );
 #+end_example
 
-Fill the ~shares~ table with the your community ~apt~ (apartment number)
-and ~share~ value pairs (ignore the ~code~ column).
+Fill the ~shares~ table with your community ~apt~ (apartment number) and
+~share~ value pairs (ignore the ~code~ column).
 
 * Program initialization
 
@@ -45,8 +45,8 @@ database file. If the optional ~:+~ argument is added, the security ~code~s
 in ~shares~ would be initialized with random two-byte BLOBs. These BLOBs
 can be useful with the printed material mailed to the voters to enhance the
 election security. It can substitute the need for using an expensive
-special paper to prevent [[https://ballotpedia.org/Ballot_stuffing][Ballot Stuffing]]. You can then import the (apt,
-code) pairs to a ~secure.csv~ spreadsheet as follows:
+special paper to prevent [[https://ballotpedia.org/Ballot_stuffing][Ballot Stuffing]]. You can export the (apt, code)
+pairs to a ~secure.csv~ spreadsheet as follows:
 
 #+begin_example
 $ sqlite3 condo.db
@@ -59,8 +59,8 @@ sqlite> select apt, hex(code) as code from shares order by apt;
 sqlite> .quit
 #+end_example
 
-An empty table of ~votes~ would then be created or recreated if it already
-exists! The ~votes~ table has the following columns:
+An empty table of ~votes~ would be created or *recreated if it already
+exists*. The ~votes~ table has the following structure:
 
 #+begin_example
 CREATE TABLE votes (
@@ -76,7 +76,7 @@ forensic purposes only.
 
 * Examples
 
-Initialize (+ security codes):
+Initialize with new security codes:
 
 #+begin_example
 Microsoft Windows [Version 10.0.19043.1237]
