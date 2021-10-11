@@ -1,5 +1,13 @@
-PROGS := vote
-DBNAME := wt200
+# one or more programs:
+PROG := vote
+# SQLite database name:
+DBNAME := condo
+
+WPROG := $(addsuffix .exe,$(PROG))
+ZIP := releases/Windows-binary-release.zip
+
+all: $(PROG)
+zip: $(ZIP)
 
 MMM=i686-w64-mingw32.static
 MXE=${HOME}/mxe/usr
@@ -11,10 +19,6 @@ _CFLAGS ?= -Wall -Wextra -Os -s
 
 CFLAGS ?= -Wall -Wextra -g
 
-EXECS := $(PROGS) $(addsuffix .exe,$(PROGS))
-
-all: $(EXECS)
-
 define BUILD
 $(1): $(1).c
 	gcc $(CFLAGS) -D DBNAME=\"$(DBNAME)\" -o $(1) $(1).c -lsqlite3
@@ -22,7 +26,11 @@ $(1).exe: $(1).c
 	PATH=$(_PATH) CPATH=$(_CPATH) $(MMM)-gcc $(_CFLAGS) -D DBNAME=\"$(DBNAME)\" -o $(1).exe $(1).c -lsqlite3
 endef
 
-$(foreach PROG,$(PROGS),$(eval $(call BUILD,$(PROG))))
+$(foreach EXE,$(PROG),$(eval $(call BUILD,$(EXE))))
+
+$(ZIP): $(WPROG) $(DBNAME).db
+	zip $@ $^
 
 clean:
-	rm -f $(EXECS)
+	rm -f $(PROG) $(WPROG)
+

@@ -1,5 +1,5 @@
 # -*- mode: org; mode: auto-fill; fill-column: 75; -*- 
-#+TITLE: Condo Assoc Ballot Tallying Aid
+#+TITLE: Community Assoc Ballot Tallying Aid
 #+AUTHOR: Enoch
 #+EMAIL: ixew@hotmail.com
 #+OPTIONS: email:t
@@ -7,39 +7,60 @@
 
 * General
 
-The following is a "quick & dirty" ballot tallying program for the benefit
-of some troubled high rise community in the North East of the USA.  This
-community votes through weighted shares. Data entry is optimized for the
-use of "blind" right-hand PC numeric-pad typing.  This program uses the
-SQLite data base and is written in C. To examine the collected votes use a
-program like [[http://sqlitebrowser.org/][SQLITEbrowser]] on the database file.
+~vote~ is a quick ballot tallying program that was written for some
+troubled high rise community in the North East of the USA.  This community
+votes through weighted shares. Data entry is optimized for the use of blind
+right-hand PC numeric-pad typing.  ~vote~ uses the SQLite database library
+(sqlite3 version) and is written in C. To examine the database file
+collected ballots use [[http://sqlitebrowser.org/][SQLITEbrowser]] or a similar tool.
 
-The program (vote) can be built on Linux also for Windows using [[https://mxe.cc/][MXE (M
-cross environment]] (vote.exe). See the Makefile.
+~vote.exe~, the equivalent Microsoft Windows version, is built on Linux
+using [[https://mxe.cc/][MXE (M cross environment)]]. Here is the latest [[./Windows-binary-release.zip][Windows binary release]].
 
 * Software License
 
-The software in this repository is in the public domain, following the
+The software in this repository is in the public domain following the
 example set by the [[http://www.sqlite.org/copyright.html][SQLite Project]].
 
-* sqlite3 mycondo.db
+* Prerequisite
 
-Create a table of shares in the database and fill it with the apt number
-and the share value pairs of your community; Ignore the code blob.
+If not provided, create the SQLite data base file ~condo.db~ (this filename
+is set in the Makefile) with the following table of shares:
 
 #+begin_example
 CREATE TABLE shares (
 	apt	INTEGER PRIMAY KEY,
 	share	INTEGER,
 	code	BLOB
-)
+);
 #+end_example
 
-* vote [-i <seats>:<candidates>]
+Fill the ~shares~ table with the your community ~apt~ (apartment number)
+and ~share~ value pairs (ignore the ~code~ column).
 
-Initialize the database file; This includes changing the security code in
-the table of shares with a two byte random blob. A new votes table is then
-created with the following fields:
+* Program initialization
+
+Run ~vote -i <seats>:<candidates>[:+]~ [fn:1] to initialize the ~condo.db~
+database file. If the optional ~:+~ argument is added, the security ~code~s
+in ~shares~ would be initialized with random two-byte BLOBs. These BLOBs
+can be useful with the printed material mailed to the voters to enhance the
+election security. It can substitute the need for using an expensive
+special paper to prevent [[https://ballotpedia.org/Ballot_stuffing][Ballot Stuffing]]. You can then import the (apt,
+code) pairs to a ~secure.csv~ spreadsheet as follows:
+
+#+begin_example
+$ sqlite3 condo.db
+SQLite version 3.34.1 2021-01-20 14:10:07
+Enter ".help" for usage hints.
+sqlite> .output secure.csv
+sqlite> .headers on
+sqlite> .mode csv
+sqlite> select apt, hex(code) as code from shares order by apt;
+sqlite> .quit
+#+end_example
+
+An empty table of ~votes~ would then be created or recreated if it already
+exists! The ~votes~ table has the following columns:
 
 #+begin_example
 CREATE TABLE votes (
@@ -47,52 +68,76 @@ CREATE TABLE votes (
       vtime INTEGER,
       can1 INTEGER DEFAULT 0,
       ...
-)
+);
 #+end_example
 
-vtime is the "unix time" when accepting the apt no vote and it is captured
-for forensic purposes only. can1, etc. are the total number of shares cast
-for the first candidate, etc.
+vtime is the "unix time" of enering the apt vote; It is captured for
+forensic purposes only.
 
 * Examples
 
-Initialize and vote:
+Initialize (+ security codes):
 
 #+begin_example
-$ ./vote -i 2:4
-mycondo.db loader. Exit by Ctrl-Z (EOF). EW Oct  7 2021.
-mycondo: apts=1000 shares=1000005 
-Enter negative apt to delete the apt vote.
+Microsoft Windows [Version 10.0.19043.1237]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Users\ixew>cd Desktop
+
+C:\Users\ixew\Desktop>vote -i 2:4:+
+condo.db loader. Exit by Ctrl-Z (EOF). EW Oct 11 2021.
+condo: apts=614 shares=1000005
+Enter negative apt to delete an apt vote.
 Seats = 2, Candidates = 4
 
-Voted: apts=0 shares=N/A c1=N/A c2=N/A c3=N/A 
-Apt.Can1.Can2... 1901.1.2
-Ballot: share=1469 code=0x09AF 
+Voted: apts=0 shares=N/A c1=N/A c2=N/A c3=N/A
+Apt.Can1.Can2... ^Z
+EOF
+condo.db changed.
+Press Enter to end...
 
-Apt.Can1.Can2... EOF
-mycondo.db changed.
-
+C:\Users\ixew\Desktop>
 #+end_example
 
-Just Use:
+Use:
 
 #+begin_example
-
-$ ./vote
-mycondo.db loader. Exit by Ctrl-Z (EOF). EW Oct  7 2021.
-Enter negative apt to delete the apt vote.
+condo.db loader. Exit by Ctrl-Z (EOF). EW Oct 11 2021.
+Enter negative apt to delete an apt vote.
 Seats = 2, Candidates = 4
 
-Voted: apts=1 shares=1469 c1=1469 c2=1469 c3=0 
-Apt.Can1.Can2... 1901 
-APT ALREADY VOTED
+Voted: apts=0 shares=N/A c1=N/A c2=N/A c3=N/A
+Apt.Can1.Can2... 3121.1.2
+Ballot: share=1371 code=0xDD17
 
-Voted: apts=1 shares=1469 c1=1469 c2=1469 c3=0 
-Apt.Can1.Can2... -1901
-DELETED APT NO 1901
+Voted: apts=1 shares=1371 c1=1371 c2=1371 c3=0
+Apt.Can1.Can2... 3120.3.4
+Ballot: share=2150 code=0xFA9E
 
-Voted: apts=0 shares=N/A c1=N/A c2=N/A c3=N/A 
-Apt.Can1.Can2... EOF
-mycondo.db changed.
+Voted: apts=2 shares=3521 c3=2150 c4=2150 c1=1371
+Apt.Can1.Can2... 2
+APT UNKNOWN
 
+Voted: apts=2 shares=3521 c3=2150 c4=2150 c1=1371
+Apt.Can1.Can2... 7.5.6
+Ballot: share=1340 code=0xED04
+ILL CAN
+
+Voted: apts=2 shares=3521 c3=2150 c4=2150 c1=1371
+Apt.Can1.Can2... 7
+Ballot: share=1340 code=0xED04
+
+Voted: apts=3 shares=4861 c3=2150 c4=2150 c1=1371
+Apt.Can1.Can2... -7
+DELETED APT NO 7
+
+Voted: apts=2 shares=3521 c3=2150 c4=2150 c1=1371
+Apt.Can1.Can2... ^Z
+EOF
+condo.db changed.
+Press Enter to end...
 #+end_example
+
+* Footnotes
+
+[fn:1] To open a Windows Terminal type ~WIN+R~ and then the ~cmd~ command.

@@ -1,11 +1,12 @@
 /* Voting SQLite loader, Enoch */
 
+#include <errno.h>
+#include <sqlite3.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <sqlite3.h>
 
 #ifdef __MINGW32__
 /* 
@@ -97,7 +98,8 @@ void bye()
 
 int main(int argc, char *argv[])
 {
-  char *del = "., \n", *p, line[1024], *q, text[1024];
+  const char *del = "., \n";
+  char blob, *p, line[1024], *q, text[1024];
   int init, opt, seas, cans;
   int i, j, cnt, num, ix[CANS];
   int cycle;
@@ -127,38 +129,46 @@ int main(int argc, char *argv[])
 
   atexit(bye);
 
-  init = 0;
+  init = 0; blob = '-';
   while ((opt = getopt(argc, argv, "i:")) != -1) {
     switch (opt) {
     case 'i':
-      num = sscanf(optarg, "%d:%d", &seas, &cans);
-      if (num != 2 || seas < 1 || seas > SEAS || cans < 1 || cans > CANS)
-	fprintf(stderr, "Check arguments\n");
-      else {
-	init = 1;
-	break;
+      num = sscanf(optarg, "%d:%d:%c", &seas, &cans, &blob);
+      if (2 <= num && num <= 3 &&
+	  1 <= seas && seas <= SEAS &&
+	  1 <= cans && cans <= CANS &&
+	  (num == 2 || blob == '+')) {
+	  init = 1;
+	  break;
       }
-    default:			/* '?' */
-      fprintf(stderr, "Usage: vote [-i #Seats:#Candidates]\n");
+      goto note;
+      
+    case '?':
+    note:
+      fprintf(stderr, "vote -i <#Seats>:<#Candidates>[:+]\n");
       exit(EXIT_FAILURE);
     }
   }
 
   if (init) {
-    if ((fp = fopen(line, "wt")) == NULL
-	|| fprintf(fp, "%d:%d\n", seas, cans) < 0 || fclose(fp) == EOF) {
+    if ((fp = fopen(line, "wt")) == NULL ||
+	fprintf(fp, "%d:%d:%c\n", seas, cans, blob) < 0 ||
+	fclose(fp) == EOF) {
       perror(line);
       exit(EXIT_FAILURE);
     }
     Guard(sqlite3_open_v2(text, &DB, SQLITE_OPEN_READWRITE, NULL));
     Guard(sqlite3_exec
-	  (DB, "update shares set code = randomblob(2)", NULL, NULL, NULL));
+	  (DB, blob == '+' ?
+	   "UPDATE shares SET code = randomblob(2)" :
+	   "UPDATE shares SET code = NULL", NULL, NULL, NULL));
     Guard(sqlite3_exec
 	  (DB, "SELECT count(*) AS apts, sum(share) AS shares FROM shares",
 	   DBReport, DBNAME, &DBerr));
-    sqlite3_exec(DB, "drop table votes", NULL, NULL, NULL);
+    sqlite3_exec(DB, "DROP TABLE votes", NULL, NULL, NULL);
     change = 1;
-    strcpy(text, "CREATE TABLE votes (apt INTEGER PRIMAY KEY, vtime INTEGER, ");
+    strcpy(text,
+	   "CREATE TABLE votes (apt INTEGER PRIMAY KEY, vtime INTEGER, ");
     for (i = 0; i < cans; i++) {
       p = text + strlen(text);
       sprintf(p, "can%d INTEGER DEFAULT 0, ", i + 1);
@@ -168,15 +178,16 @@ int main(int argc, char *argv[])
     Guard(sqlite3_exec(DB, text, NULL, NULL, &DBerr));
   }
   else {
-    if ((fp = fopen(line, "rt")) == NULL
-	|| fscanf(fp, "%d:%d\n", &seas, &cans) != 2 || fclose(fp) == EOF) {
+      if ((fp = fopen(line, "rt")) == NULL ||
+	fscanf(fp, "%d:%d:%c\n", &seas, &cans, &blob) != 3 ||
+	fclose(fp) == EOF) {
       perror(line);
       exit(EXIT_FAILURE);
     }
     Guard(sqlite3_open_v2(text, &DB, SQLITE_OPEN_READWRITE, NULL));
   }
 
-  printf("Enter negative apt to delete the apt vote.\n"
+  printf("Enter negative apt to delete an apt vote.\n"
 	 "Seats = %d, Candidates = %d\n", seas, cans);
 
   while (1) {
@@ -248,9 +259,8 @@ int main(int argc, char *argv[])
       continue;
     }
 
-    sprintf(text,
-	    "SELECT share, '0x' || hex(code) AS code FROM shares WHERE apt = %d",
-	    cnt);
+    sprintf(text, "SELECT share %s FROM shares WHERE apt = %d",
+	    (blob == '+' ? ", '0x' || hex(code) AS code" : ""), cnt);
     sqlite3_exec(DB, text, DBReport, "Ballot", &DBerr);
     num = Report[0];
 
@@ -275,7 +285,7 @@ int main(int argc, char *argv[])
       continue;
     }
 
-    strcpy(text, "INSERT INTO votes (vtime, apt, ");
+    strcpy(text, "INSERT INTO votes (apt, vtime, ");
     for (i = 0; i < cans; i++) {
       if (ix[i] > 0) {
 	p = text + strlen(text);
