@@ -1,15 +1,15 @@
 
 # Table of Contents
 
-1.  [General](#org65fa538)
-2.  [Software License and Legal Disclaimer](#org6cf8bc1)
-3.  [Prerequisite](#org35a3e3a)
-4.  [Program initialization](#org91332c3)
-5.  [Examples](#org279f63b)
+1.  [General](#org9108286)
+2.  [Software License and Legal Disclaimer](#orga26bf02)
+3.  [Prerequisite](#orgea52d16)
+4.  [Program initialization](#orgda9bb6a)
+5.  [Examples](#orge3b3102)
 
 
 
-<a id="org65fa538"></a>
+<a id="org9108286"></a>
 
 # General
 
@@ -24,7 +24,7 @@ collected ballots use [SQLITEbrowser](http://sqlitebrowser.org/) or a similar to
 using [MXE (M cross environment)](https://mxe.cc/). Here is the latest [Windows binary release](./Windows-binary-release.zip).
 
 
-<a id="org6cf8bc1"></a>
+<a id="orga26bf02"></a>
 
 # Software License and Legal Disclaimer
 
@@ -33,7 +33,7 @@ set by the [SQLite Project](http://www.sqlite.org/copyright.html). The software 
 warranty, and disclaiming liability for damages resulting from its use.
 
 
-<a id="org35a3e3a"></a>
+<a id="orgea52d16"></a>
 
 # Prerequisite
 
@@ -50,17 +50,17 @@ Fill the `shares` table with your community `apt` (apartment number) and
 `share` value pairs (ignore the `code` column).
 
 
-<a id="org91332c3"></a>
+<a id="orgda9bb6a"></a>
 
 # Program initialization
 
 Run `vote -i <seats>:<candidates>[:+]` <sup><a id="fnr.1" class="footref" href="#fn.1" role="doc-backlink">1</a></sup> to initialize the `condo.db`
-database file. If the optional `:+` argument is added, the security `code~s
-in ~shares` would be initialized with random two-byte BLOBs. These BLOBs
-can be useful with the printed material mailed to the voters to enhance the
-election security. It can substitute the need for using an expensive
-special paper to prevent [Ballot Stuffing](https://ballotpedia.org/Ballot_stuffing). You can export the (apt, code)
-pairs to a `secure.csv` spreadsheet as follows:
+database file. If the optional `:+` argument is added, the security `code`
+in `shares` would be initialized with random two-byte BLOBs. These security
+codes can be used on printed forms that are mailed to the shareholders to
+enhance the security of the election. They can substitute the need for
+using an expensive special paper to prevent [Ballot Stuffing](https://ballotpedia.org/Ballot_stuffing). You can export
+the (apt, code) pairs to a `secure.csv` spreadsheet as follows:
 
     $ sqlite3 condo.db
     SQLite version 3.34.1 2021-01-20 14:10:07
@@ -85,7 +85,7 @@ vtime is the "unix time" of enering the apt vote; It is captured for
 forensic purposes only.
 
 
-<a id="org279f63b"></a>
+<a id="orge3b3102"></a>
 
 # Examples
 

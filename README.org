@@ -42,12 +42,12 @@ Fill the ~shares~ table with your community ~apt~ (apartment number) and
 * Program initialization
 
 Run ~vote -i <seats>:<candidates>[:+]~ [fn:1] to initialize the ~condo.db~
-database file. If the optional ~:+~ argument is added, the security ~code~s
-in ~shares~ would be initialized with random two-byte BLOBs. These BLOBs
-can be useful with the printed material mailed to the voters to enhance the
-election security. It can substitute the need for using an expensive
-special paper to prevent [[https://ballotpedia.org/Ballot_stuffing][Ballot Stuffing]]. You can export the (apt, code)
-pairs to a ~secure.csv~ spreadsheet as follows:
+database file. If the optional ~:+~ argument is added, the security ~code~
+in ~shares~ would be initialized with random two-byte BLOBs. These security
+codes can be used on printed forms that are mailed to the shareholders to
+enhance the security of the election. They can substitute the need for
+using an expensive special paper to prevent [[https://ballotpedia.org/Ballot_stuffing][Ballot Stuffing]]. You can export
+the (apt, code) pairs to a ~secure.csv~ spreadsheet as follows:
 
 #+begin_example
 $ sqlite3 condo.db
