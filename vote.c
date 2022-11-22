@@ -94,7 +94,7 @@ void bye()
     if (quit)
 	printf("EOF\n");
     if (change)
-	printf(DBNAME ".db changed. \n");
+	printf(DBNAME ".db changed.\n");
 #ifdef __MINGW32__
     if (change || !quit) {
 	printf("Press Enter to end...");
@@ -107,10 +107,9 @@ void bye()
 int main(int argc, char *argv[])
 {
     const char *del = "., \n";
-    char secret, *p, line[1024], *q, text[1024];
-    int init, opt, seas, cans;
+    char *p, line[1024], *q, text[1024], xX;
+    int init, opt, seas, cans, secret; 
     int i, j, rc, cnt, num, ix[CANS];
-    int cycle;
     FILE *fp;
 
     strcpy(line, argv[0]);
@@ -133,19 +132,16 @@ int main(int argc, char *argv[])
 	q = text;
     strcpy(q, DBNAME ".db");
 
-    init = 0;
-    secret = 'O';
+    init = secret = 0; xX = 'O';
     while ((opt = getopt(argc, argv, "?i:")) != -1) {
 	switch (opt) {
 	case 'i':
-	    num = sscanf(optarg, "%d:%d:%c", &seas, &cans, &secret);
-	    if (2 <= num && num <= 3 &&
-		1 <= seas && seas <= SEAS &&
-		1 <= cans && cans <= CANS &&
-		(num == 2 || (toupper(secret) == 'X'))) {
-		init = 1;
-		break;
-	    }
+	    num = sscanf(optarg, "%d:%d:%c", &seas, &cans, &xX);
+	    init = (2 <= num && num <= 3 &&
+		    1 <= seas && seas <= SEAS &&
+		    1 <= cans && cans <= CANS &&
+		    (num == 2 || (secret = toupper(xX) == 'X')));
+	    if (init) break;
 	    __attribute__((fallthrough));
 
 	case '?':
@@ -160,18 +156,12 @@ int main(int argc, char *argv[])
     atexit(bye);
 
     if (init) {
-	if ((fp = fopen(line, "wt")) == NULL ||
-	    fprintf(fp, "%d:%d:%c\n", seas, cans, secret) < 0 ||
-	    fclose(fp) == EOF) {
-	    perror(line);
-	    exit(EXIT_FAILURE);
-	}
 	Guard(sqlite3_open_v2(text, &DB, SQLITE_OPEN_READWRITE, NULL));
 
 	Exec("CREATE TABLE IF NOT EXISTS bans(apt INTEGER PRIMARY KEY, comment TEXT)", NULL, NULL, NULL);
 
-	if (toupper(secret) == 'X') {
-	    if (secret == 'X') {
+	if (secret) {
+	    if (xX == 'X') {
 		for (cnt = 0; cnt < 10; cnt++) {
 		    rc = sqlite3_exec(DB, "UPDATE shares SET code = random()",
 				      NULL, NULL, NULL);
@@ -185,7 +175,6 @@ int main(int argc, char *argv[])
 
 	    Exec("DROP TABLE IF EXISTS shuffle", NULL, NULL, NULL);
 	    Exec("CREATE TABLE shuffle (apt INTEGER PRIMARY KEY AUTOINCREMENT, share INTEGER, code INTEGER)", NULL, NULL, NULL);
-
 	    Exec("INSERT INTO shuffle (share, code) "
 		 "SELECT share, code FROM shares LEFT JOIN bans USING (apt) WHERE bans.apt IS NULL ORDER BY code",
 		 NULL, NULL, NULL);
@@ -215,24 +204,35 @@ int main(int argc, char *argv[])
 	}
 	strcat(text, ")");
 	Exec(text, NULL, NULL, &DBerr);
-    }
-    else {
-	if ((fp = fopen(line, "rt")) == NULL ||
-	    fscanf(fp, "%d:%d:%c\n", &seas, &cans, &secret) != 3 ||
+
+	if ((fp = fopen(line, "wt")) == NULL ||
+	    fprintf(fp, "%d:%d:%d\n", seas, cans, secret) < 0 ||
 	    fclose(fp) == EOF) {
 	    perror(line);
 	    exit(EXIT_FAILURE);
 	}
-	secret = toupper(secret);
+    }
+    else {
+	if ((fp = fopen(line, "rt")) == NULL ||
+	    fscanf(fp, "%d:%d:%d\n", &seas, &cans, &secret) != 3 ||
+	    fclose(fp) == EOF) {
+	    perror(line);
+	    exit(EXIT_FAILURE);
+	}
 	Guard(sqlite3_open_v2(text, &DB, SQLITE_OPEN_READWRITE, NULL));
     }
 
-    printf("Enter negative apt to delete vote.\n"
-	   DBNAME ": Seats = %d, Candidates = %d, APT# %s!\n", seas, cans,
-	   secret == 'X' ? "SECRET" : "REAL");
+    printf("Enter negative APT# to delete its vote; "
+#ifdef __MINGW32__
+	   "Enter ctrl-Z to end program.\n"
+#else
+	   "Enter ctrl-D to end program.\n"
+#endif
+	   DBNAME ": Seats = %d, Candidates = %d, %s APT#\n", seas, cans,
+	   secret ? "SECRET" : "REAL");
 
     while (1) {
-	cycle = 0;
+	__label__ cycle; cycle:
 
 	/* report current vote */
 
@@ -243,10 +243,11 @@ int main(int argc, char *argv[])
 	}
 	p = text + strlen(text) - 2;
 	strcpy(p, " FROM votes");
-	Exec(text, DBReport, NULL, &DBerr); /* Report[i] sums shares cast for can[i] */
+	Exec(text, DBReport, NULL, &DBerr);	/* Report[i] sums shares cast for can[i] */
 
-	strcpy(text, "SELECT count(apt) AS apts, sum(shuffle.share) AS shares");
-	for (i = 0; i <= seas; i++) { /* descending sort candidates */
+	strcpy(text,
+	       "SELECT count(apt) AS apts, sum(shuffle.share) AS shares");
+	for (i = 0; i <= seas; i++) {	/* descending sort candidates */
 	    num = -1;
 	    for (j = 0; j < cans; j++) {
 		if (Report[j] > num) {
@@ -263,7 +264,7 @@ int main(int argc, char *argv[])
 
 	/* enter new vote */
 
-	printf("Apt.Can1.Can2... ");
+	printf("APT#.Can1.Can2... ");
 	fflush(stdout);
 	p = fgets(line, sizeof(line), stdin);
 	if (p == NULL) {
@@ -274,14 +275,15 @@ int main(int argc, char *argv[])
 	p = strtok_r(p, del, &q);
 	if (p == NULL || sscanf(p, "%d", &cnt) != 1) {
 	    printf("NO INPUT\n");
-	    continue;
+	    goto cycle;
 	}
 
-	sprintf(text, "SELECT count(*) FROM shuffle WHERE apt = %d", abs(cnt));
+	sprintf(text, "SELECT count(*) FROM shuffle WHERE apt = %d",
+		abs(cnt));
 	Exec(text, DBReport, NULL, &DBerr);
 	if (Report[0] != 1) {
 	    printf("APT# UNKNOWN\n");
-	    continue;
+	    goto cycle;
 	}
 
 	if (cnt < 0) {
@@ -289,14 +291,14 @@ int main(int argc, char *argv[])
 	    Exec(text, NULL, NULL, &DBerr);
 	    change = 1;
 	    printf("DELETED APT# %d\n", abs(cnt));
-	    continue;
+	    goto cycle;
 	}
 
 	sprintf(text, "SELECT count(*) FROM votes WHERE apt = %d", cnt);
 	Exec(text, DBReport, NULL, &DBerr);
 	if (Report[0] != 0) {
 	    printf("APT# ALREADY VOTED\n");
-	    continue;
+	    goto cycle;
 	}
 
 	sprintf(text, "SELECT share FROM shuffle WHERE apt = %d", cnt);
@@ -311,18 +313,15 @@ int main(int argc, char *argv[])
 	    if (sscanf(p, "%d", &j) != 1 || j < 1 || j > cans
 		|| ix[j - 1] > 0) {
 		printf("ILL CAN\n");
-		cycle = 1;
-		break;
+		goto cycle;
 	    }
 	    ix[j - 1] = num;
 	    p = strtok_r(NULL, del, &q);
 	}
-	if (cycle)		/* goto substitute */
-	    continue;
 
 	if (p != NULL) {
 	    printf("TOO MANY VOTES\n");
-	    continue;
+	    goto cycle;
 	}
 
 	strcpy(text, "INSERT INTO votes (apt, vtime, ");

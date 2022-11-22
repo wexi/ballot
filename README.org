@@ -37,9 +37,9 @@ CREATE TABLE "shares" (
 );
 #+end_example
 
-Fill the ~shares~ table with your community ~apt~ (apartment number) and
-~share~ value pairs (ignore the ~code~ column, it helps in generating
-secret apartment numbers).
+Fill the ~shares~ table with your community ~apt~ (apartment number) /
+~share~ value pairs. Ignore the ~code~ colum, it would hold random numbers
+necessary for the anonymous tallying method.
 
 * Program initialization
 
@@ -48,13 +48,14 @@ Run ~vote -i <seats>:<candidates>[:x]~ to initialize the program's
 
 The optional third argument, ~:x~ or ~:X~, initializes the program for the
 use of secret (anonymous) apartment numbers rather than real numbers during
-sensitive votes entry. *NOTE!* Only when using the upper case ~:X~ argument
-would new secret apartment numbers be generated.
+sensitive (publicly observed) tallying. *NOTE!* Only when using the upper
+case ~:X~ argument would new secret apartment numbers be
+generated. Lower-case ~:x~ argument initializes the program to use the
+pre-existing secret numbers. This is convenient when needing to switch
+between *secret* and *real* apartment numbers tally.
 
-An "anon" table is created to relate the real apartment numbers with their
-secret counterparts. Lower-case ~:x~ argument initializes the program to
-use the pre-existing secret numbers. This is convenient when needing to
-switch between *secret* and *real* apartment numbers entry.
+An "anon" table is created to relate the real apartment number with its
+secret counterpart. 
 
 A "bans" table of *real* apartment numbers can be provided to reject votes
 from those apartments.

@@ -1,14 +1,14 @@
 
 # Table of Contents
 
-1.  [General](#orga0d0640)
-2.  [Software License and Legal Disclaimer](#orgdc87ea4)
-3.  [Prerequisite](#org97672cb)
-4.  [Program initialization](#org78b2765)
+1.  [General](#org1f8f3b0)
+2.  [Software License and Legal Disclaimer](#orgaee1530)
+3.  [Prerequisite](#orgf7f654f)
+4.  [Program initialization](#org51fe305)
 
 
 
-<a id="orga0d0640"></a>
+<a id="org1f8f3b0"></a>
 
 # General
 
@@ -23,7 +23,7 @@ database file collected ballots use [SQLITEbrowser](http://sqlitebrowser.org/) o
 using [MXE (M cross environment)](https://mxe.cc/). Here is the latest [Windows binary release](./Windows-binary-release.zip).
 
 
-<a id="orgdc87ea4"></a>
+<a id="orgaee1530"></a>
 
 # Software License and Legal Disclaimer
 
@@ -32,7 +32,7 @@ set by the [SQLite Project](http://www.sqlite.org/copyright.html). The software 
 warranty, and disclaiming liability for damages resulting from its use.
 
 
-<a id="org97672cb"></a>
+<a id="orgf7f654f"></a>
 
 # Prerequisite
 
@@ -46,12 +46,12 @@ is set in the Makefile) with the following table of shares:
     	PRIMARY KEY("apt")
     );
 
-Fill the `shares` table with your community `apt` (apartment number) and
-`share` value pairs (ignore the `code` column, it helps in generating
-secret apartment numbers).
+Fill the `shares` table with your community `apt` (apartment number) /
+`share` value pairs. Ignore the `code` colum, it would hold random numbers
+necessary for the anonymous tallying method.
 
 
-<a id="org78b2765"></a>
+<a id="org51fe305"></a>
 
 # Program initialization
 
@@ -60,13 +60,14 @@ Run `vote -i <seats>:<candidates>[:x]` to initialize the program's
 
 The optional third argument, `:x` or `:X`, initializes the program for the
 use of secret (anonymous) apartment numbers rather than real numbers during
-sensitive votes entry. **NOTE!** Only when using the upper case `:X` argument
-would new secret apartment numbers be generated.
+sensitive (publicly observed) tallying. **NOTE!** Only when using the upper
+case `:X` argument would new secret apartment numbers be
+generated. Lower-case `:x` argument initializes the program to use the
+pre-existing secret numbers. This is convenient when needing to switch
+between **secret** and **real** apartment numbers tally.
 
-An "anon" table is created to relate the real apartment numbers with their
-secret counterparts. Lower-case `:x` argument initializes the program to
-use the pre-existing secret numbers. This is convenient when needing to
-switch between **secret** and **real** apartment numbers entry.
+An "anon" table is created to relate the real apartment number with its
+secret counterpart. 
 
 A "bans" table of **real** apartment numbers can be provided to reject votes
 from those apartments.
