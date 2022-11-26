@@ -47,13 +47,13 @@ char *strtok_r(char *str, const char *delim, char **nextp)
 #define NCOLS 23		/* max number of db columns */
 
 int Report[NCOLS];
-int DBReport(void *mess, int ncols, char **values, char **headers)
+int DBreport(void *name, int ncols, char **values, char **headers)
 {
     int i;
     char *value;
 
-    if (mess != NULL && ncols > 0)
-	printf("%s: ", (const char *) mess);
+    if (name != NULL && ncols > 0)
+	printf("%s: ", (const char *) name);
     for (i = 0; i < ncols; i++) {
 	value = values[i];
 	if (value == NULL) {
@@ -62,41 +62,36 @@ int DBReport(void *mess, int ncols, char **values, char **headers)
 	}
 	else
 	    sscanf(value, "%i", Report + i);
-	if (mess != NULL)
+	if (name != NULL)
 	    printf("%s=%s ", headers[i], value);
     }
-    if (mess != NULL && ncols > 0)
+    if (name != NULL && ncols > 0)
 	printf("\n");
     return 0;
 }
 
 sqlite3 *DB;
-char *DBerr = "";
-void Guard(int rc)
+int quit = 0;
+
+void Exec(const char *sql, int (*callback)(void *, int, char **, char **), void *foreword)
 {
-    if (rc != SQLITE_OK) {
-	fprintf(stderr, "SQL error: %s\n",
-		*DBerr ? DBerr : sqlite3_errmsg(DB));
+    char *errmsg = NULL;
+    if (sqlite3_exec(DB, sql, callback, foreword, &errmsg) != SQLITE_OK) {
+	if (errmsg) {
+	    fprintf(stderr, DBNAME ": %s\n", errmsg);
+	    sqlite3_free(errmsg);
+	}
 	sqlite3_close(DB);
 	exit(EXIT_FAILURE);
     }
 }
 
-void Exec(const char *sql, int (*callback)(void *, int, char **, char **),
-	  void *arg, char **errmsg)
-{
-    Guard(sqlite3_exec(DB, sql, callback, arg, errmsg));
-}
-
-int change = 0, quit = 0;
 void bye()
 {
     if (quit)
 	printf("EOF\n");
-    if (change)
-	printf(DBNAME ".db changed.\n");
 #ifdef __MINGW32__
-    if (change || !quit) {
+    if (!quit) {
 	printf("Press Enter to end...");
 	fflush(stdout);
 	while (getchar() != '\n');
@@ -107,8 +102,8 @@ void bye()
 int main(int argc, char *argv[])
 {
     const char *del = "., \n";
-    char *p, line[1024], *q, text[1024], xX;
-    int init, opt, seas, cans, secret; 
+    char *p, line[1024], *q, text[1024], xX, *sally, *sunit;
+    int init, opt, seas, cans, secret, anon;
     int i, j, rc, cnt, num, ix[CANS];
     FILE *fp;
 
@@ -132,7 +127,8 @@ int main(int argc, char *argv[])
 	q = text;
     strcpy(q, DBNAME ".db");
 
-    init = secret = 0; xX = 'O';
+    init = secret = 0;
+    xX = 'O';
     while ((opt = getopt(argc, argv, "?i:")) != -1) {
 	switch (opt) {
 	case 'i':
@@ -141,7 +137,8 @@ int main(int argc, char *argv[])
 		    1 <= seas && seas <= SEAS &&
 		    1 <= cans && cans <= CANS &&
 		    (num == 2 || (secret = toupper(xX) == 'X')));
-	    if (init) break;
+	    if (init)
+		break;
 	    __attribute__((fallthrough));
 
 	case '?':
@@ -155,47 +152,52 @@ int main(int argc, char *argv[])
 
     atexit(bye);
 
-    if (init) {
-	Guard(sqlite3_open_v2(text, &DB, SQLITE_OPEN_READWRITE, NULL));
+    if (sqlite3_open_v2(text, &DB, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK) {
+	fprintf(stderr, DBNAME ": %s\n", sqlite3_errmsg(DB));
+	exit(EXIT_FAILURE);
+    }
 
-	Exec("CREATE TABLE IF NOT EXISTS bans(apt INTEGER PRIMARY KEY, comment TEXT)", NULL, NULL, NULL);
+    if (init) {
+	Exec("CREATE TABLE IF NOT EXISTS bans(apt INTEGER PRIMARY KEY, comment TEXT)", NULL, NULL);
 
 	if (secret) {
 	    if (xX == 'X') {
 		for (cnt = 0; cnt < 10; cnt++) {
-		    rc = sqlite3_exec(DB, "UPDATE shares SET code = random()",
-				      NULL, NULL, NULL);
-		    if (rc == SQLITE_OK
-			|| sqlite3_extended_errcode(DB) !=
-			SQLITE_CONSTRAINT_UNIQUE)
+		    rc = sqlite3_exec(DB, "UPDATE shares SET code = random()", NULL, NULL, NULL);
+		    if (rc == SQLITE_OK || rc != SQLITE_CONSTRAINT)
 			break;
 		}
-		Guard(rc);
+		if (rc != SQLITE_OK) {
+		    fprintf(stderr, DBNAME ": %s\n", sqlite3_errmsg(DB));
+		    sqlite3_close(DB);
+		    exit(EXIT_FAILURE);
+		}
+	    }
+	    
+	    Exec("SELECT count(apt) FROM shares WHERE code IS NULL", DBreport, NULL);
+	    if (Report[0]) {
+		fprintf(stderr, DBNAME ": shares code column is uninitialized!\n");
+		exit(EXIT_FAILURE);
 	    }
 
-	    Exec("DROP TABLE IF EXISTS shuffle", NULL, NULL, NULL);
-	    Exec("CREATE TABLE shuffle (apt INTEGER PRIMARY KEY AUTOINCREMENT, share INTEGER, code INTEGER)", NULL, NULL, NULL);
-	    Exec("INSERT INTO shuffle (share, code) "
-		 "SELECT share, code FROM shares LEFT JOIN bans USING (apt) WHERE bans.apt IS NULL ORDER BY code",
-		 NULL, NULL, NULL);
+	    Exec("DROP TABLE IF EXISTS shuffle", NULL, NULL);
+	    Exec("CREATE TABLE shuffle (apt INTEGER PRIMARY KEY AUTOINCREMENT, share INTEGER, code INTEGER)", NULL, NULL);
+	    Exec("INSERT INTO shuffle (share, code) SELECT share, code FROM shares LEFT JOIN bans USING (apt) WHERE bans.apt IS NULL ORDER BY code", NULL, NULL);
 
-	    Exec("DROP TABLE IF EXISTS anon", NULL, NULL, NULL);
-	    Exec("CREATE TABLE anon AS SELECT shares.apt apt, shuffle.apt unit FROM shares JOIN shuffle USING (code) ORDER BY apt", NULL, NULL, NULL);
+	    Exec("DROP TABLE IF EXISTS anon", NULL, NULL);
+	    Exec("CREATE TABLE anon AS SELECT shares.apt apt, shuffle.apt unit FROM shares JOIN shuffle USING (code) ORDER BY apt", NULL, NULL);
+	    anon = 1;
 	}
 	else {
-	    Exec("DROP TABLE IF EXISTS shuffle", NULL, NULL, NULL);
+	    Exec("DROP TABLE IF EXISTS shuffle", NULL, NULL);
 	    Exec("CREATE TABLE shuffle AS "
 		 "SELECT apt, share FROM shares LEFT JOIN bans USING (apt) WHERE bans.apt IS NULL ORDER BY code",
-		 NULL, NULL, NULL);
+		 NULL, NULL);
 	}
 
-	Exec("SELECT COUNT(apt) AS apts, sum(share) AS shares FROM shuffle",
-	     DBReport, DBNAME, &DBerr);
+	Exec("SELECT COUNT(apt) AS apts, sum(share) AS shares FROM shuffle", DBreport, DBNAME);
 
-	Exec("DROP TABLE IF EXISTS votes", NULL, NULL, NULL);
-
-	change = 1;
-
+	Exec("DROP TABLE IF EXISTS votes", NULL, NULL);
 	strcpy(text,
 	       "CREATE TABLE votes (apt INTEGER PRIMAY KEY, vtime INTEGER");
 	for (i = 0; i < cans; i++) {
@@ -203,7 +205,7 @@ int main(int argc, char *argv[])
 	    sprintf(p, ", can%d INTEGER DEFAULT 0", i + 1);
 	}
 	strcat(text, ")");
-	Exec(text, NULL, NULL, &DBerr);
+	Exec(text, NULL, NULL);
 
 	if ((fp = fopen(line, "wt")) == NULL ||
 	    fprintf(fp, "%d:%d:%d\n", seas, cans, secret) < 0 ||
@@ -219,20 +221,25 @@ int main(int argc, char *argv[])
 	    perror(line);
 	    exit(EXIT_FAILURE);
 	}
-	Guard(sqlite3_open_v2(text, &DB, SQLITE_OPEN_READWRITE, NULL));
+	Exec("SELECT count(*) FROM votes", NULL, NULL);
     }
 
-    printf("Enter negative APT# to delete its vote; "
+    anon = sqlite3_exec(DB, "SELECT count(*) FROM anon", NULL, NULL, NULL) == SQLITE_OK;
+    sally = secret ? "Anon" : "Open";
+    sunit = secret ? "Unit#" : "Apt#";
+
+    printf("Enter negative %s to delete its vote; "
 #ifdef __MINGW32__
 	   "Enter ctrl-Z to end program.\n"
 #else
 	   "Enter ctrl-D to end program.\n"
 #endif
-	   DBNAME ": Seats = %d, Candidates = %d, %s APT#\n", seas, cans,
-	   secret ? "SECRET" : "REAL");
+	   , sunit);
+printf("%s Vote: Seats = %d, Candidates = %d\n", sally, seas, cans);
 
     while (1) {
-	__label__ cycle; cycle:
+	__label__ cycle;
+      cycle:
 
 	/* report current vote */
 
@@ -243,10 +250,10 @@ int main(int argc, char *argv[])
 	}
 	p = text + strlen(text) - 2;
 	strcpy(p, " FROM votes");
-	Exec(text, DBReport, NULL, &DBerr);	/* Report[i] sums shares cast for can[i] */
+	Exec(text, DBreport, NULL); /* Report[i] sums shares cast for can[i] */
 
 	strcpy(text,
-	       "SELECT count(apt) AS apts, sum(shuffle.share) AS shares");
+	       "SELECT count(apt) 'ballots', sum(shuffle.share) AS 'shares'");
 	for (i = 0; i <= seas; i++) {	/* descending sort candidates */
 	    num = -1;
 	    for (j = 0; j < cans; j++) {
@@ -260,16 +267,17 @@ int main(int argc, char *argv[])
 	    sprintf(p, ", sum(votes.can%d) AS c%d", cnt + 1, cnt + 1);
 	}
 	strcat(text, " FROM votes JOIN shuffle USING (apt)");
-	Exec(text, DBReport, "\nVoted", &DBerr);
+	Exec(text, DBreport, "\nVoted");
 
-	/* enter new vote */
+	/* enter vote */
 
-	printf("APT#.Can1.Can2... ");
+	printf("%s.Can1.Can2... ", sunit);
 	fflush(stdout);
 	p = fgets(line, sizeof(line), stdin);
 	if (p == NULL) {
 	    quit = 1;
-	    break;
+	    sqlite3_close(DB);
+	    exit(EXIT_SUCCESS);
 	}
 
 	p = strtok_r(p, del, &q);
@@ -278,32 +286,33 @@ int main(int argc, char *argv[])
 	    goto cycle;
 	}
 
-	sprintf(text, "SELECT count(*) FROM shuffle WHERE apt = %d",
-		abs(cnt));
-	Exec(text, DBReport, NULL, &DBerr);
+	sprintf(text, "SELECT count(*) FROM shuffle WHERE apt = %d", abs(cnt));
+	Exec(text, DBreport, NULL);
 	if (Report[0] != 1) {
-	    printf("APT# UNKNOWN\n");
+	    printf("%s UNKNOWN\n", sunit);
 	    goto cycle;
 	}
 
+	if (secret || !anon)
+	    sprintf(text, "SELECT apt '%s', share 'Share' FROM shuffle WHERE apt = %d", sunit, cnt);
+	else
+	    sprintf(text, "SELECT apt 'Apt#', unit 'Anon#', share 'Share' FROM shuffle JOIN anon USING (apt) WHERE apt = %d", cnt);
+	Exec(text, DBreport, "Member");
+	num = Report[1];
+
 	if (cnt < 0) {
 	    sprintf(text, "DELETE FROM votes WHERE apt = %d", abs(cnt));
-	    Exec(text, NULL, NULL, &DBerr);
-	    change = 1;
-	    printf("DELETED APT# %d\n", abs(cnt));
+	    Exec(text, NULL, NULL);
+	    printf("DELETED %s %d\n", sunit, abs(cnt));
 	    goto cycle;
 	}
 
 	sprintf(text, "SELECT count(*) FROM votes WHERE apt = %d", cnt);
-	Exec(text, DBReport, NULL, &DBerr);
+	Exec(text, DBreport, NULL);
 	if (Report[0] != 0) {
-	    printf("APT# ALREADY VOTED\n");
+	    printf("%s ALREADY VOTED\n", sunit);
 	    goto cycle;
 	}
-
-	sprintf(text, "SELECT share FROM shuffle WHERE apt = %d", cnt);
-	Exec(text, DBReport, "Ballot", &DBerr);
-	num = Report[0];
 
 	memset(ix, 0, sizeof(int) * cans);
 	p = strtok_r(NULL, del, &q);
@@ -340,10 +349,6 @@ int main(int argc, char *argv[])
 	    }
 	p = text + strlen(text) - 2;
 	strcpy(p, ")");
-	sqlite3_exec(DB, text, NULL, NULL, &DBerr);
-	change = 1;
+	Exec(text, NULL, NULL);
     }
-    sqlite3_close(DB);
-
-    exit(EXIT_SUCCESS);
 }
