@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 {
     const char *del = "., \n";
     char *p, line[1024], *q, text[1024], xX, *sally, *sunit;
-    int init, opt, seas, cans, secret, anon;
+    int init, opt, seas, cans, secret, anons;
     int i, j, rc, cnt, num, ix[CANS];
     FILE *fp;
 
@@ -158,7 +158,10 @@ int main(int argc, char *argv[])
     }
 
     if (init) {
-	Exec("CREATE TABLE IF NOT EXISTS bans(apt INTEGER PRIMARY KEY, comment TEXT)", NULL, NULL);
+
+	Exec("CREATE TABLE IF NOT EXISTS evotes(apt INTEGER PRIMARY KEY, FOREIGN KEY(apt) REFERENCES shares(apt))", NULL, NULL);
+	Exec("CREATE TABLE IF NOT EXISTS arrears(apt INTEGER PRIMARY KEY, FOREIGN KEY(apt) REFERENCES shares(apt))", NULL, NULL);
+	Exec("CREATE TEMP TABLE bans AS SELECT apt FROM evotes UNION SELECT apt FROM arrears", NULL, NULL);
 
 	if (secret) {
 	    if (xX == 'X') {
@@ -176,35 +179,33 @@ int main(int argc, char *argv[])
 	    
 	    Exec("SELECT count(apt) FROM shares WHERE code IS NULL", DBreport, NULL);
 	    if (Report[0]) {
-		fprintf(stderr, DBNAME ": shares code column is uninitialized!\n");
+		fprintf(stderr, DBNAME ": shares.code is uninitialized, use :X\n");
 		exit(EXIT_FAILURE);
 	    }
 
 	    Exec("DROP TABLE IF EXISTS shuffle", NULL, NULL);
-	    Exec("CREATE TABLE shuffle (apt INTEGER PRIMARY KEY AUTOINCREMENT, share INTEGER, code INTEGER)", NULL, NULL);
+	    Exec("CREATE TABLE shuffle (apt INTEGER PRIMARY KEY AUTOINCREMENT, share INTEGER, code INTEGER UNIQUE, FOREIGN KEY(apt) REFERENCES shares(apt))", NULL, NULL);
 	    Exec("INSERT INTO shuffle (share, code) SELECT share, code FROM shares LEFT JOIN bans USING (apt) WHERE bans.apt IS NULL ORDER BY code", NULL, NULL);
 
-	    Exec("DROP TABLE IF EXISTS anon", NULL, NULL);
-	    Exec("CREATE TABLE anon AS SELECT shares.apt apt, shuffle.apt unit FROM shares JOIN shuffle USING (code) ORDER BY apt", NULL, NULL);
-	    anon = 1;
+	    Exec("DROP TABLE IF EXISTS anons", NULL, NULL);
+	    Exec("CREATE TABLE anons (apt INTEGER PRIMARY KEY, unit INTEGER UNIQUE, FOREIGN KEY(apt) REFERENCES shares(apt))", NULL, NULL);
+	    Exec("INSERT INTO anons SELECT shares.apt apt, shuffle.apt unit FROM shares JOIN shuffle USING (code) ORDER BY apt", NULL, NULL);
 	}
 	else {
 	    Exec("DROP TABLE IF EXISTS shuffle", NULL, NULL);
-	    Exec("CREATE TABLE shuffle AS "
-		 "SELECT apt, share FROM shares LEFT JOIN bans USING (apt) WHERE bans.apt IS NULL ORDER BY code",
-		 NULL, NULL);
+	    Exec("CREATE TABLE shuffle (apt INTEGER PRIMARY KEY, share INTEGER, FOREIGN KEY(apt) REFERENCES shares(apt))", NULL, NULL);
+	    Exec("INSERT INTO shuffle SELECT apt, share FROM shares LEFT JOIN bans USING (apt) WHERE bans.apt IS NULL ORDER BY apt", NULL, NULL);
 	}
 
 	Exec("SELECT COUNT(apt) AS apts, sum(share) AS shares FROM shuffle", DBreport, DBNAME);
 
 	Exec("DROP TABLE IF EXISTS votes", NULL, NULL);
-	strcpy(text,
-	       "CREATE TABLE votes (apt INTEGER PRIMAY KEY, vtime INTEGER");
+	strcpy(text, "CREATE TABLE votes (apt INTEGER PRIMAY KEY, vtime INTEGER");
 	for (i = 0; i < cans; i++) {
 	    p = text + strlen(text);
 	    sprintf(p, ", can%d INTEGER DEFAULT 0", i + 1);
 	}
-	strcat(text, ")");
+	strcat(text, ", FOREIGN KEY(apt) REFERENCES shares(apt))");
 	Exec(text, NULL, NULL);
 
 	if ((fp = fopen(line, "wt")) == NULL ||
@@ -224,9 +225,9 @@ int main(int argc, char *argv[])
 	Exec("SELECT count(*) FROM votes", NULL, NULL);
     }
 
-    anon = sqlite3_exec(DB, "SELECT count(*) FROM anon", NULL, NULL, NULL) == SQLITE_OK;
-    sally = secret ? "Anon" : "Open";
+    anons = sqlite3_exec(DB, "SELECT count(*) FROM anons", NULL, NULL, NULL) == SQLITE_OK;
     sunit = secret ? "Unit#" : "Apt#";
+    sally = secret ? "Anon" : "Open";
 
     printf("Enter negative %s to delete its vote; "
 #ifdef __MINGW32__
@@ -235,7 +236,7 @@ int main(int argc, char *argv[])
 	   "Enter ctrl-D to end program.\n"
 #endif
 	   , sunit);
-printf("%s Vote: Seats = %d, Candidates = %d\n", sally, seas, cans);
+    printf("%s Vote: Seats = %d, Candidates = %d\n", sally, seas, cans);
 
     while (1) {
 	__label__ cycle;
@@ -252,8 +253,7 @@ printf("%s Vote: Seats = %d, Candidates = %d\n", sally, seas, cans);
 	strcpy(p, " FROM votes");
 	Exec(text, DBreport, NULL); /* Report[i] sums shares cast for can[i] */
 
-	strcpy(text,
-	       "SELECT count(apt) 'ballots', sum(shuffle.share) AS 'shares'");
+	strcpy(text, "SELECT count(apt) 'ballots', sum(shuffle.share) AS 'shares'");
 	for (i = 0; i <= seas; i++) {	/* descending sort candidates */
 	    num = -1;
 	    for (j = 0; j < cans; j++) {
@@ -293,10 +293,10 @@ printf("%s Vote: Seats = %d, Candidates = %d\n", sally, seas, cans);
 	    goto cycle;
 	}
 
-	if (secret || !anon)
+	if (secret || !anons)
 	    sprintf(text, "SELECT apt '%s', share 'Share' FROM shuffle WHERE apt = %d", sunit, cnt);
 	else
-	    sprintf(text, "SELECT apt 'Apt#', unit 'Anon#', share 'Share' FROM shuffle JOIN anon USING (apt) WHERE apt = %d", cnt);
+	    sprintf(text, "SELECT apt '%s', share 'Share', unit 'Anon#' FROM shuffle JOIN anons USING (apt) WHERE apt = %d", sunit, cnt);
 	Exec(text, DBreport, "Member");
 	num = Report[1];
 
