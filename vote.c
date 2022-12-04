@@ -71,7 +71,7 @@ int DBreport(void *name, int ncols, char **values, char **headers)
 }
 
 sqlite3 *DB;
-int quit = 0;
+int quit;
 
 void Exec(const char *sql, int (*callback)(void *, int, char **, char **), void *foreword)
 {
@@ -144,8 +144,8 @@ int main(int argc, char *argv[])
 	case '?':
 	    fprintf(stderr,
 		    "https://github.com/wexi/ballot -- " __DATE__ ".\n"
-		    "Init:\tvote -i <#Seats>:<#Candidates>[:X]\n" "Sqlite:\t"
-		    DBNAME ".db\n");
+		    "Init:\tvote -i <#Seats>:<#Candidates>[:X]\n"
+		    "Sqlite:\t" DBNAME ".db\n");
 	    exit(EXIT_FAILURE);
 	}
     }

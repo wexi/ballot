@@ -7,12 +7,13 @@
 
 * General
 
-~vote~ is a quick ballot tallying program that was originally written in
-2014 for some troubled high rise community in the North East of the USA.
-This community votes through weighted shares. Data entry is optimized for
-the use of blind right-hand PC numeric-pad typing.  ~vote~ uses the SQLite
-database library (sqlite3 version) and is written in C. To examine the
-database file collected ballots use [[http://sqlitebrowser.org/][SQLITEbrowser]] or a similar tool.
+~vote~ is a quick (paper) ballot tallying program that was originally
+written in 2014 for some troubled high rise community in the North East of
+the USA.  This community votes through weighted shares. Data entry is
+optimized for the use of blind right-hand PC numeric-pad typing.  ~vote~
+uses the SQLite database library (sqlite3 version) and is written in C. To
+examine the database file collected ballots use [[http://sqlitebrowser.org/][SQLITEbrowser]] or a similar
+tool.
 
 ~vote.exe~, the equivalent Microsoft Windows version, is built on Linux
 using [[https://mxe.cc/][MXE (M cross environment)]]. Here is the latest [[./Windows-binary-release.zip][Windows binary release]].
@@ -43,8 +44,8 @@ needed by the *secret* tallying method.
 
 * Program initialization
 
-Run ~vote -i <seats>:<candidates>[:x]~ to initialize the program's
-~condo.db~ SQLite database file; this requires opening a terminal[fn:1].
+Run ~vote -i <seats>:<candidates>[:x]~ to initialize ~condo.db~, the
+database file; this would require you to open a terminal[fn:1].
 
 The optional third argument, lower-case ~:x~ or upper-case ~:X~,
 initializes the program for secret (anonymous) apartment numbers entry
@@ -53,16 +54,18 @@ rather than their real numbers; this separation is needed during sensitive
 argument would actually new secret apartment numbers be
 generated. Lower-case ~:x~ argument initializes the program to use the
 preexisting secret numbers. This is convenient when needing to switch
-between *secret* and *real* apartment numbering tally.
+between *Anon* (secret) and *Open* (real) apartment numbering tally. ~Apt#~
+refers to the real apartment number, ~Unit#~ refers to the secret apartment
+number.
 
-An "anon" table is created in ~condo.db~ to relate the *real* apartment
+An "anons" table is created in ~condo.db~ to relate the *real* apartment
 numbers ("apt") with their *secret* counterparts ("unit"); example:
 
 #+begin_example
 sqlite> .mode col
 sqlite> .head on
-sqlite> .output "anon.txt"   
-sqlite> select * from anon order by apt;
+sqlite> .output "anons.txt"   
+sqlite> select * from anons order by apt;
 apt  unit
 ---  ----
 7    69  
@@ -72,9 +75,9 @@ apt  unit
 11   256
 #+end_example
 
-A "bans" table of *real* apartment numbers can be provided in ~condo.db~ to
-reject votes from apartments not "in good standing" or from apartments
-voting electronically.
+The ~condo.db~ database includes "evotes" (voting electronically) and
+"arrears" (not in good standing) tables, with *real* "apt" numbers which
+are not allowed to vote via paper ballots.
 
 An empty table of ~votes~ would be created or *recreated if it already
 exists*. The ~votes~ table has the following structure:
