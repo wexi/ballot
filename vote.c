@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
 	    Exec("INSERT INTO shuffle SELECT apt, share FROM shares LEFT JOIN bans USING (apt) WHERE bans.apt IS NULL ORDER BY apt", NULL, NULL);
 	}
 
-	Exec("SELECT COUNT(apt) AS apts, sum(share) AS shares FROM shuffle", DBreport, DBNAME);
+	Exec("SELECT COUNT(apt) AS 'Eligible_Apartments', sum(share) AS 'Eligible_Shares' FROM shuffle", DBreport, DBNAME);
 
 	Exec("DROP TABLE IF EXISTS votes", NULL, NULL);
 	strcpy(text, "CREATE TABLE votes (apt INTEGER PRIMAY KEY, vtime INTEGER");
@@ -296,7 +296,7 @@ int main(int argc, char *argv[])
 	if (secret || !anons)
 	    sprintf(text, "SELECT apt '%s', share 'Share' FROM shuffle WHERE apt = %d", sunit, cnt);
 	else
-	    sprintf(text, "SELECT apt '%s', share 'Share', unit 'Anon#' FROM shuffle JOIN anons USING (apt) WHERE apt = %d", sunit, cnt);
+	    sprintf(text, "SELECT apt 'Apt#', share 'Share', unit 'Unit#' FROM shuffle JOIN anons USING (apt) WHERE apt = %d", cnt);
 	Exec(text, DBreport, "Member");
 	num = Report[1];
 

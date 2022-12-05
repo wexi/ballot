@@ -7,13 +7,12 @@
 
 * General
 
-~vote~ is a quick (paper) ballot tallying program that was originally
-written in 2014 for some troubled high rise community in the North East of
-the USA.  This community votes through weighted shares. Data entry is
-optimized for the use of blind right-hand PC numeric-pad typing.  ~vote~
-uses the SQLite database library (sqlite3 version) and is written in C. To
-examine the database file collected ballots use [[http://sqlitebrowser.org/][SQLITEbrowser]] or a similar
-tool.
+~vote~ is a quick paper ballot tallying program that was originally written
+in 2014 for some troubled high rise community in the North East of the USA.
+This community votes through weighted shares. Data entry is optimized for
+numeric-pad PC typing. ~vote~ uses the SQLite database library (sqlite3
+version) and is written in C. To examine the database file collected
+ballots use [[http://sqlitebrowser.org/][SQLITEbrowser]] or a similar tool.
 
 ~vote.exe~, the equivalent Microsoft Windows version, is built on Linux
 using [[https://mxe.cc/][MXE (M cross environment)]]. Here is the latest [[./Windows-binary-release.zip][Windows binary release]].
@@ -26,8 +25,8 @@ warranty, and disclaiming liability for damages resulting from its use.
 
 * Prerequisite
 
-If not provided, create the SQLite data base file ~condo.db~ (this filename
-is set in the Makefile) with the following table of shares:
+If not provided, create the SQLite data base file ~condo.db~ (default
+Makefile DBNAME) with the following table of shares:
 
 #+begin_example
 CREATE TABLE "shares" (
@@ -38,9 +37,14 @@ CREATE TABLE "shares" (
 );
 #+end_example
 
-Fill the ~shares~ table with your community ~apt~ (apartment number) /
-~share~ value pairs. Ignore the ~code~ column, it holds random numbers
-needed by the *secret* tallying method.
+Fill the ~shares~ table with your community corresponding ~apt~ (apartment
+number) and ~share~ value pairs. Ignore the ~code~ column, a column with
+unique random numbers which are necessary for the *secret* tallying method.
+
+~condo.db~ can also include two tables, "evotes" (those voting
+electronically) and "arrears" (those not in good standing), with an "apt"
+column of apartment numbers which are not eligible to vote or can vote
+electronically only.
 
 * Program initialization
 
@@ -48,15 +52,14 @@ Run ~vote -i <seats>:<candidates>[:x]~ to initialize ~condo.db~, the
 database file; this would require you to open a terminal[fn:1].
 
 The optional third argument, lower-case ~:x~ or upper-case ~:X~,
-initializes the program for secret (anonymous) apartment numbers entry
-rather than their real numbers; this separation is needed during sensitive
-(publicly observed) tallying. *NOTE!* Only when using the upper case ~:X~
-argument would actually new secret apartment numbers be
-generated. Lower-case ~:x~ argument initializes the program to use the
-preexisting secret numbers. This is convenient when needing to switch
-between *Anon* (secret) and *Open* (real) apartment numbering tally. ~Apt#~
-refers to the real apartment number, ~Unit#~ refers to the secret apartment
-number.
+initializes the program for secret (anonymous) *Unit#* entries rather than
+real *Apt#* entries. This separation is needed for sensitive (publicly
+observed) tallying. *NOTE!* Only when using the upper case ~:X~ argument
+would actually new secret *Unit#* numbers be generated. Lower-case ~:x~
+argument initializes the program to use the preexisting secret
+numbers. This is convenient when needing to switch between *Anon* (secret)
+and *Open* (real) numbering tally. ~Apt#~ refers to the real apartment
+number, ~Unit#~ refers to the secret apartment number.
 
 An "anons" table is created in ~condo.db~ to relate the *real* apartment
 numbers ("apt") with their *secret* counterparts ("unit"); example:
@@ -75,16 +78,12 @@ apt  unit
 11   256
 #+end_example
 
-The ~condo.db~ database includes "evotes" (voting electronically) and
-"arrears" (not in good standing) tables, with *real* "apt" numbers which
-are not allowed to vote via paper ballots.
-
 An empty table of ~votes~ would be created or *recreated if it already
 exists*. The ~votes~ table has the following structure:
 
 #+begin_example
 CREATE TABLE votes (
-      apt INTEGER PRIMAY KEY,
+      apt INTEGER PRIMARY KEY,
       vtime INTEGER,
       can1 INTEGER DEFAULT 0,
       ...
