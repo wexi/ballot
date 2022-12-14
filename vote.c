@@ -63,7 +63,7 @@ int DBreport(void *name, int ncols, char **values, char **headers)
 	else
 	    sscanf(value, "%i", Report + i);
 	if (name != NULL)
-	    printf("%s=%s ", headers[i], value);
+	    printf("%s = %s ", headers[i], value);
     }
     if (name != NULL && ncols > 0)
 	printf("\n");
@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
 	    }
 
 	    Exec("DROP TABLE IF EXISTS shuffle", NULL, NULL);
-	    Exec("CREATE TABLE shuffle (apt INTEGER PRIMARY KEY AUTOINCREMENT, share INTEGER, code INTEGER UNIQUE, FOREIGN KEY(apt) REFERENCES shares(apt))", NULL, NULL);
+	    Exec("CREATE TABLE shuffle (apt INTEGER PRIMARY KEY AUTOINCREMENT, share INTEGER, code INTEGER UNIQUE)", NULL, NULL);
 	    Exec("INSERT INTO shuffle (share, code) SELECT share, code FROM shares LEFT JOIN bans USING (apt) WHERE bans.apt IS NULL ORDER BY code", NULL, NULL);
 
 	    Exec("DROP TABLE IF EXISTS anons", NULL, NULL);
@@ -196,8 +196,6 @@ int main(int argc, char *argv[])
 	    Exec("CREATE TABLE shuffle (apt INTEGER PRIMARY KEY, share INTEGER, FOREIGN KEY(apt) REFERENCES shares(apt))", NULL, NULL);
 	    Exec("INSERT INTO shuffle SELECT apt, share FROM shares LEFT JOIN bans USING (apt) WHERE bans.apt IS NULL ORDER BY apt", NULL, NULL);
 	}
-
-	Exec("SELECT COUNT(apt) AS 'Eligible_Apartments', sum(share) AS 'Eligible_Shares' FROM shuffle", DBreport, DBNAME);
 
 	Exec("DROP TABLE IF EXISTS votes", NULL, NULL);
 	strcpy(text, "CREATE TABLE votes (apt INTEGER PRIMAY KEY, vtime INTEGER");
@@ -229,6 +227,8 @@ int main(int argc, char *argv[])
     sunit = secret ? "Unit#" : "Apt#";
     sally = secret ? "Anon" : "Open";
 
+    Exec("SELECT COUNT(apt) AS 'Eligible-Apartments', sum(share) AS 'Eligible-Shares' FROM shuffle", DBreport, DBNAME);
+    printf("%s Vote: Seats = %d, Candidates = %d\n", sally, seas, cans);
     printf("Enter negative %s to delete its vote; "
 #ifdef __MINGW32__
 	   "Enter ctrl-Z to end program.\n"
@@ -236,8 +236,7 @@ int main(int argc, char *argv[])
 	   "Enter ctrl-D to end program.\n"
 #endif
 	   , sunit);
-    printf("%s Vote: Seats = %d, Candidates = %d\n", sally, seas, cans);
-
+    
     while (1) {
 	__label__ cycle;
       cycle:
@@ -290,6 +289,12 @@ int main(int argc, char *argv[])
 	Exec(text, DBreport, NULL);
 	if (Report[0] != 1) {
 	    printf("%s UNKNOWN\n", sunit);
+	    if (!secret) {
+		sprintf(text, "SELECT count(apt) AS '#evotes' FROM evotes WHERE apt = %d", abs(cnt));
+		Exec(text, DBreport, "Search");
+		sprintf(text, "SELECT count(apt) AS '#arrears' FROM arrears WHERE apt = %d", abs(cnt));
+		Exec(text, DBreport, "Search");
+	    }
 	    goto cycle;
 	}
 
