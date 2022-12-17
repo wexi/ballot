@@ -185,11 +185,13 @@ int main(int argc, char *argv[])
 
 	    Exec("DROP TABLE IF EXISTS shuffle", NULL, NULL);
 	    Exec("CREATE TABLE shuffle (apt INTEGER PRIMARY KEY AUTOINCREMENT, share INTEGER, code INTEGER UNIQUE)", NULL, NULL);
-	    Exec("INSERT INTO shuffle (share, code) SELECT share, code FROM shares LEFT JOIN bans USING (apt) WHERE bans.apt IS NULL ORDER BY code", NULL, NULL);
+	    Exec("INSERT INTO shuffle (share, code) SELECT share, code FROM shares ORDER BY code", NULL, NULL);
 
 	    Exec("DROP TABLE IF EXISTS anons", NULL, NULL);
 	    Exec("CREATE TABLE anons (apt INTEGER PRIMARY KEY, unit INTEGER UNIQUE, FOREIGN KEY(apt) REFERENCES shares(apt))", NULL, NULL);
 	    Exec("INSERT INTO anons SELECT shares.apt apt, shuffle.apt unit FROM shares JOIN shuffle USING (code) ORDER BY apt", NULL, NULL);
+
+	    Exec("DELETE FROM shuffle WHERE code IN (SELECT code FROM shares JOIN bans USING (apt))", NULL, NULL);
 	}
 	else {
 	    Exec("DROP TABLE IF EXISTS shuffle", NULL, NULL);
