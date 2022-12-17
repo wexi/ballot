@@ -6,10 +6,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <time.h>
 #include <unistd.h>
 
 #ifdef __MINGW32__
+#define QUIT " Enter ctrl-Z to end program.\n"
+
 /* 
  * public domain strtok_r() by Charlie Gordon
  *
@@ -40,6 +43,9 @@ char *strtok_r(char *str, const char *delim, char **nextp)
     *nextp = str;
     return ret;
 }
+
+#else
+#define QUIT " Enter ctrl-D to end program.\n"
 #endif
 
 #define SEAS 7			/* max no. of seats */
@@ -73,7 +79,8 @@ int DBreport(void *name, int ncols, char **values, char **headers)
 sqlite3 *DB;
 int quit;
 
-void Exec(const char *sql, int (*callback)(void *, int, char **, char **), void *foreword)
+void Exec(const char *sql, int (*callback)(void *, int, char **, char **),
+	  void *foreword)
 {
     char *errmsg = NULL;
     if (sqlite3_exec(DB, sql, callback, foreword, &errmsg) != SQLITE_OK) {
@@ -89,15 +96,20 @@ void Exec(const char *sql, int (*callback)(void *, int, char **, char **), void 
 void bye()
 {
     if (quit)
-	printf("EOF\n");
+	fprintf(stderr, "EOF\n");
 #ifdef __MINGW32__
     if (!quit) {
-	printf("Press Enter to end...");
+	fprintf(stderr, "Press Enter to end...");
 	fflush(stdout);
 	while (getchar() != '\n');
     }
 #endif
 }
+
+void cry(int __attribute__ ((unused)) signum)
+{
+    fprintf(stderr, QUIT);
+}    
 
 int main(int argc, char *argv[])
 {
@@ -151,6 +163,7 @@ int main(int argc, char *argv[])
     }
 
     atexit(bye);
+    signal(SIGINT, cry);
 
     if (sqlite3_open_v2(text, &DB, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK) {
 	fprintf(stderr, DBNAME ": %s\n", sqlite3_errmsg(DB));
@@ -158,7 +171,6 @@ int main(int argc, char *argv[])
     }
 
     if (init) {
-
 	Exec("CREATE TABLE IF NOT EXISTS evotes(apt INTEGER PRIMARY KEY, FOREIGN KEY(apt) REFERENCES shares(apt))", NULL, NULL);
 	Exec("CREATE TABLE IF NOT EXISTS arrears(apt INTEGER PRIMARY KEY, FOREIGN KEY(apt) REFERENCES shares(apt))", NULL, NULL);
 	Exec("CREATE TEMP TABLE bans AS SELECT apt FROM evotes UNION SELECT apt FROM arrears", NULL, NULL);
@@ -166,7 +178,8 @@ int main(int argc, char *argv[])
 	if (secret) {
 	    if (xX == 'X') {
 		for (cnt = 0; cnt < 10; cnt++) {
-		    rc = sqlite3_exec(DB, "UPDATE shares SET code = random()", NULL, NULL, NULL);
+		    rc = sqlite3_exec(DB, "UPDATE shares SET code = random()",
+				      NULL, NULL, NULL);
 		    if (rc == SQLITE_OK || rc != SQLITE_CONSTRAINT)
 			break;
 		}
@@ -176,7 +189,7 @@ int main(int argc, char *argv[])
 		    exit(EXIT_FAILURE);
 		}
 	    }
-	    
+
 	    Exec("SELECT count(apt) FROM shares WHERE code IS NULL", DBreport, NULL);
 	    if (Report[0]) {
 		fprintf(stderr, DBNAME ": shares.code is uninitialized, use :X\n");
@@ -216,13 +229,31 @@ int main(int argc, char *argv[])
 	}
     }
     else {
-	if ((fp = fopen(line, "rt")) == NULL ||
-	    fscanf(fp, "%d:%d:%d\n", &seas, &cans, &secret) != 3 ||
-	    fclose(fp) == EOF) {
+	if ((fp = fopen(line, "rt")) == NULL) {
 	    perror(line);
 	    exit(EXIT_FAILURE);
 	}
+	if (!(fscanf(fp, "%d:%d:%d\n", &seas, &cans, &secret) == 3
+	      && 1 <= seas && seas <= SEAS && 1 <= cans && cans <= CANS
+	      && fclose(fp) == 0)) {
+	    fprintf(stderr, "Check vote init!\n");
+	    exit(EXIT_FAILURE);
+	}
+
+	/* verify tables existence */
 	Exec("SELECT count(*) FROM votes", NULL, NULL);
+	Exec("SELECT count(*) FROM evotes", NULL, NULL);
+	Exec("SELECT count(*) FROM arrears", NULL, NULL);
+	Exec("SELECT count(*) FROM shuffle", NULL, NULL);
+
+	if (!secret) {
+	    Exec("CREATE TEMP TABLE bans AS SELECT apt FROM evotes UNION SELECT apt FROM arrears", NULL, NULL);
+	    Exec("SELECT count(*) FROM votes JOIN bans USING (apt)", DBreport, NULL);
+	    if (Report[0] != 0) {
+		fprintf(stderr,	DBNAME " Ineligible apartments had voted, manual intervention is needed!\n");
+		exit(EXIT_FAILURE);
+	    }
+	}
     }
 
     anons = sqlite3_exec(DB, "SELECT count(*) FROM anons", NULL, NULL, NULL) == SQLITE_OK;
@@ -231,14 +262,8 @@ int main(int argc, char *argv[])
 
     Exec("SELECT COUNT(apt) AS 'Eligible-Apartments', sum(share) AS 'Eligible-Shares' FROM shuffle", DBreport, DBNAME);
     printf("%s Vote: Seats = %d, Candidates = %d\n", sally, seas, cans);
-    printf("Enter negative %s to delete its vote; "
-#ifdef __MINGW32__
-	   "Enter ctrl-Z to end program.\n"
-#else
-	   "Enter ctrl-D to end program.\n"
-#endif
-	   , sunit);
-    
+    printf("Enter negative %s to delete its vote;" QUIT, sunit);
+
     while (1) {
 	__label__ cycle;
       cycle:
@@ -252,7 +277,7 @@ int main(int argc, char *argv[])
 	}
 	p = text + strlen(text) - 2;
 	strcpy(p, " FROM votes");
-	Exec(text, DBreport, NULL); /* Report[i] sums shares cast for can[i] */
+	Exec(text, DBreport, NULL);	/* Report[i] sums shares cast for can[i] */
 
 	strcpy(text, "SELECT count(apt) 'ballots', sum(shuffle.share) AS 'shares'");
 	for (i = 0; i <= seas; i++) {	/* descending sort candidates */
@@ -287,23 +312,32 @@ int main(int argc, char *argv[])
 	    goto cycle;
 	}
 
-	sprintf(text, "SELECT count(*) FROM shuffle WHERE apt = %d", abs(cnt));
+	sprintf(text, "SELECT count(*) FROM shuffle WHERE apt = %d",
+		abs(cnt));
 	Exec(text, DBreport, NULL);
 	if (Report[0] != 1) {
 	    printf("%s UNKNOWN\n", sunit);
 	    if (!secret) {
-		sprintf(text, "SELECT count(apt) AS '#evotes' FROM evotes WHERE apt = %d", abs(cnt));
+		sprintf(text,
+			"SELECT count(apt) AS '#evotes' FROM evotes WHERE apt = %d",
+			abs(cnt));
 		Exec(text, DBreport, "Search");
-		sprintf(text, "SELECT count(apt) AS '#arrears' FROM arrears WHERE apt = %d", abs(cnt));
+		sprintf(text,
+			"SELECT count(apt) AS '#arrears' FROM arrears WHERE apt = %d",
+			abs(cnt));
 		Exec(text, DBreport, "Search");
 	    }
 	    goto cycle;
 	}
 
 	if (secret || !anons)
-	    sprintf(text, "SELECT apt '%s', share 'Share' FROM shuffle WHERE apt = %d", sunit, cnt);
+	    sprintf(text,
+		    "SELECT apt '%s', share 'Share' FROM shuffle WHERE apt = %d",
+		    sunit, cnt);
 	else
-	    sprintf(text, "SELECT apt 'Apt#', share 'Share', unit 'Unit#' FROM shuffle JOIN anons USING (apt) WHERE apt = %d", cnt);
+	    sprintf(text,
+		    "SELECT apt 'Apt#', share 'Share', unit 'Unit#' FROM shuffle JOIN anons USING (apt) WHERE apt = %d",
+		    cnt);
 	Exec(text, DBreport, "Member");
 	num = Report[1];
 
